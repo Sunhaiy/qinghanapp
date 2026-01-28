@@ -49,6 +49,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     
+    // 为 HorizontalPager 添加 foundation 依赖
+    implementation("androidx.compose.foundation:foundation")
+    
     // 加上这一行，以支持扩展图标（如 MoreHoriz, BookmarkBorder, ChatBubbleOutline 等）
     implementation("androidx.compose.material:material-icons-extended")
 

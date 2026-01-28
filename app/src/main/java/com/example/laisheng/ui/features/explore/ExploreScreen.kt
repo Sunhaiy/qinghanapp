@@ -17,6 +17,7 @@ import dev.chrisbanes.haze.hazeSource
 
 @Composable
 fun ExploreScreen(hazeState: HazeState) {
+    // 为探索页面添加更多卡片内容
     val mockPosts = listOf(
         Post(
             id = 1,
@@ -35,6 +36,42 @@ fun ExploreScreen(hazeState: HazeState) {
             timestamp = "2小时前",
             likeCount = 102,
             commentCount = 5
+        ),
+        Post(
+            id = 3,
+            username = "美食家",
+            handle = "@foodie",
+            content = "刚刚发现了一家超赞的街边小吃，幸福感爆棚！没有什么是一顿美食解决不了的。",
+            timestamp = "3小时前",
+            likeCount = 378,
+            commentCount = 88
+        ),
+        Post(
+            id = 4,
+            username = "旅行的意义",
+            handle = "@traveler",
+            content = "世界的尽头，是回家的路。但在那之前，我想先看看世界的所有风景。",
+            timestamp = "5小时前",
+            likeCount = 199,
+            commentCount = 21
+        ),
+        Post(
+            id = 5,
+            username = "书虫",
+            handle = "@bookworm",
+            content = "在书中，我遇见了未曾谋面的自己，也抵达了从未踏足的远方。",
+            timestamp = "昨天",
+            likeCount = 98,
+            commentCount = 12
+        ),
+        Post(
+            id = 6,
+            username = "电影迷",
+            handle = "@cinephile",
+            content = "一部好的电影，就像一场完美的人生梦境。你最喜欢哪部电影？",
+            timestamp = "昨天",
+            likeCount = 451,
+            commentCount = 150
         )
     )
 
@@ -46,9 +83,9 @@ fun ExploreScreen(hazeState: HazeState) {
         LazyColumn(
             modifier = Modifier.fillMaxSize()
         ) {
-            // 顶部留出 TopBar 的空间 (TopBar 高度大约是状态栏 + 文字高度)
+            // 顶部留出 TopBar 的空间
             item { 
-                Spacer(modifier = Modifier.height(60.dp)) 
+                Spacer(modifier = Modifier.height(64.dp))
             }
             
             items(mockPosts) { post ->
