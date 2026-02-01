@@ -18,19 +18,21 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -43,7 +45,6 @@ import com.example.laisheng.ui.features.home.HomeScreen
 import com.example.laisheng.ui.features.message.MessageScreen
 import com.example.laisheng.ui.features.mine.MineScreen
 import com.example.laisheng.ui.features.post.PostScreen
-
 import com.example.laisheng.ui.theme.LaishengTheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
@@ -61,67 +62,81 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
 @Composable
 fun Laisheng() {
     val hazeState = rememberHazeState()
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    var showPostDialog by remember { mutableStateOf(false) }
 
-    // 底部导航栏显示的项
+    if (showPostDialog) {
+        Dialog(onDismissRequest = { showPostDialog = false }) {
+            PostScreen(
+                onCancel = { showPostDialog = false },
+                onPost = { showPostDialog = false }
+            )
+        }
+    }
+
     val items = listOf(
         Route.Home,
         Route.Explore,
-        Route.Post, // 发布按钮放在中间
+        Route.Post,
         Route.Message,
         Route.Mine
     )
 
     Scaffold(
-        topBar = { 
+        topBar = {
             TopBar(
                 hazeState = hazeState,
                 currentRoute = currentRoute
-            ) 
+            )
         },
         bottomBar = {
             BottomNavigation(
                 hazeState = hazeState,
                 navController = navController,
-                items = items
+                items = items,
+                onPostClick = { showPostDialog = true }
             )
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.padding()) {
-            NavHost(
-                navController = navController,
-                startDestination = Route.Home.route
-            ) {
-                composable(Route.Home.route) {
-                    HomeScreen(hazeState)
+        NavHost(
+            navController = navController,
+            startDestination = Route.Home.route
+        ) {
+            composable(Route.Home.route) {
+                HomeScreen(hazeState, paddingValues)
+            }
+            composable(Route.Explore.route) {
+                Box(modifier = Modifier.padding()) {
+                    ExploreScreen(hazeState,paddingValues)
                 }
-                composable(Route.Explore.route) {
-                    ExploreScreen(hazeState)
-                }
-                composable(Route.Post.route) {
-                    PostScreen(hazeState)
-                }
-                composable(Route.Message.route) {
+            }
+            composable(Route.Message.route) {
+                Box(modifier = Modifier.padding(paddingValues)) {
                     MessageScreen(hazeState)
                 }
-                composable(Route.Mine.route) {
+            }
+            composable(Route.Mine.route) {
+                Box(modifier = Modifier.padding(paddingValues)) {
                     MineScreen(hazeState)
                 }
             }
         }
     }
 }
+
 @Composable
 fun BottomNavigation(
     modifier: Modifier = Modifier,
     hazeState: HazeState,
     navController: NavController,
-    items: List<Route>
+    items: List<Route>,
+    onPostClick: () -> Unit
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -141,32 +156,37 @@ fun BottomNavigation(
             items.forEach { screen ->
                 val isSelected = currentRoute == screen.route
                 val isPostButton = screen is Route.Post
-                
+
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .weight(1f)
                         .clickable {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            if (isPostButton) {
+                                onPostClick()
+                            } else {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
                         }
                 ) {
                     Icon(
-                        imageVector = if (isSelected) screen.selectedIcon else screen.unselectedIcon,
+                        imageVector = if (isSelected && !isPostButton) screen.selectedIcon else screen.unselectedIcon,
                         contentDescription = screen.title,
-                        tint = if (isSelected) Color.Black else Color.Gray,
-                        modifier = if (isPostButton) Modifier.size(36.dp) else Modifier.size(24.dp) // 发布按钮稍微大一点
+                        tint = if (isSelected && !isPostButton) Color.Black else Color.Gray,
+                        modifier = if (isPostButton) Modifier.size(36.dp) else Modifier.size(24.dp)
                     )
                 }
             }
         }
     }
 }
+
 @Composable
 fun TopBar(
     modifier: Modifier = Modifier,
@@ -232,14 +252,6 @@ fun TopBar(
             Route.Mine.route -> {
                 Text(
                     text = "我的",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-            }
-            Route.Post.route -> {
-                Text(
-                    text = "发布",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
