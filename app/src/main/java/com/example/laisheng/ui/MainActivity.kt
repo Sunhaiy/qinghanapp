@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -42,6 +43,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.laisheng.navigation.Route
 import com.example.laisheng.ui.features.explore.ExploreScreen
 import com.example.laisheng.ui.features.home.HomeScreen
+import com.example.laisheng.ui.features.login.LoginScreen
 import com.example.laisheng.ui.features.message.MessageScreen
 import com.example.laisheng.ui.features.mine.MineScreen
 import com.example.laisheng.ui.features.post.PostScreen
@@ -65,65 +67,82 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Laisheng() {
-    val hazeState = rememberHazeState()
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-    var showPostDialog by remember { mutableStateOf(false) }
+    // 状态管理：记录当前登录的用户 ID
+    var loggedInUserId by remember { mutableStateOf<String?>(null) }
 
-    if (showPostDialog) {
-        Dialog(onDismissRequest = { showPostDialog = false }) {
-            PostScreen(
-                onCancel = { showPostDialog = false },
-                onPost = { showPostDialog = false }
-            )
+    if (loggedInUserId == null) {
+        // 未登录时显示登录界面
+        LoginScreen(onLoginSuccess = { userId ->
+            loggedInUserId = userId
+        })
+    } else {
+        // 已登录时显示主界面
+        val userId = loggedInUserId ?: ""
+        val hazeState = rememberHazeState()
+        val navController = rememberNavController()
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route
+        var showPostDialog by remember { mutableStateOf(false) }
+
+        if (showPostDialog) {
+            Dialog(onDismissRequest = { showPostDialog = false }) {
+                PostScreen(
+                    userId = userId,
+                    onCancel = { showPostDialog = false },
+                    onPostSuccess = { showPostDialog = false }
+                )
+            }
         }
-    }
 
-    val items = listOf(
-        Route.Home,
-        Route.Explore,
-        Route.Post,
-        Route.Message,
-        Route.Mine
-    )
+        val items = listOf(
+            Route.Home,
+            Route.Explore,
+            Route.Post,
+            Route.Message,
+            Route.Mine
+        )
 
-    Scaffold(
-        topBar = {
-            TopBar(
-                hazeState = hazeState,
-                currentRoute = currentRoute
-            )
-        },
-        bottomBar = {
-            BottomNavigation(
-                hazeState = hazeState,
+        Scaffold(
+            topBar = {
+                TopBar(
+                    hazeState = hazeState,
+                    currentRoute = currentRoute
+                )
+            },
+            bottomBar = {
+                BottomNavigation(
+                    hazeState = hazeState,
+                    navController = navController,
+                    items = items,
+                    onPostClick = { showPostDialog = true }
+                )
+            }
+        ) { paddingValues ->
+            NavHost(
                 navController = navController,
-                items = items,
-                onPostClick = { showPostDialog = true }
-            )
-        }
-    ) { paddingValues ->
-        NavHost(
-            navController = navController,
-            startDestination = Route.Home.route
-        ) {
-            composable(Route.Home.route) {
-                HomeScreen(hazeState, paddingValues)
-            }
-            composable(Route.Explore.route) {
-                Box(modifier = Modifier.padding()) {
-                    ExploreScreen(hazeState,paddingValues)
+                startDestination = Route.Home.route
+            ) {
+                composable(Route.Home.route) {
+                    HomeScreen(hazeState, paddingValues)
                 }
-            }
-            composable(Route.Message.route) {
-                Box(modifier = Modifier.padding(paddingValues)) {
-                    MessageScreen(hazeState)
+                composable(Route.Explore.route) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        ExploreScreen(
+                            hazeState = hazeState,
+                            paddingValues = paddingValues,
+                            userId = userId
+                        )
+                    }
                 }
-            }
-            composable(Route.Mine.route) {
-                Box(modifier = Modifier.padding(paddingValues)) {
-                    MineScreen(hazeState)
+                composable(Route.Message.route) {
+                    Box(modifier = Modifier.padding(paddingValues)) {
+                        MessageScreen(hazeState)
+                    }
+                }
+                composable(Route.Mine.route) {
+                    Box(modifier = Modifier.padding(paddingValues)) {
+                        MineScreen(hazeState)
+                    }
                 }
             }
         }
@@ -145,6 +164,11 @@ fun BottomNavigation(
         modifier = modifier
             .fillMaxWidth()
             .height(80.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {}
+            )
             .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin())
             .navigationBarsPadding()
     ) {
@@ -196,6 +220,11 @@ fun TopBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {}
+            )
             .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin())
             .statusBarsPadding()
             .height(56.dp)

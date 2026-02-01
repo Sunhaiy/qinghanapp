@@ -6,22 +6,38 @@ import retrofit2.http.*
 interface ApiService {
 
     // --- 用户相关 ---
+    @POST("api/users/login")
+    suspend fun login(@Body request: Map<String, String>): User
+
+    @POST("api/users/register")
+    suspend fun register(@Body request: Map<String, String>): User
+
     @GET("api/users/{id}")
     suspend fun getUser(@Path("id") id: String): User
 
     // --- 瞬间 (Moments) 相关 ---
-
-    // 获取瞬间列表 (流)
     @GET("api/moments")
-    suspend fun getMoments(): MomentResponse // 修改这里：返回包装后的对象
+    suspend fun getMoments(
+        @Query("current_user_id") currentUserId: String? = null
+    ): MomentResponse
 
-    // 发布瞬间
     @POST("api/moments")
     suspend fun createMoment(@Body request: CreateMomentRequest): Moment
 
-    // --- 互动相关 ---
-
-    // 点赞 (切换状态)
+    // --- 互动相关 (点赞/收藏) ---
     @POST("api/likes/toggle")
     suspend fun toggleLike(@Body request: ToggleRequest): Map<String, Boolean>
+
+    @POST("api/collections/toggle")
+    suspend fun toggleCollection(@Body request: ToggleRequest): Map<String, Boolean>
+
+    @GET("api/collections/user/{userId}")
+    suspend fun getUserCollections(@Path("userId") userId: String): List<Moment>
+
+    // --- 评论相关 ---
+    @POST("api/comments")
+    suspend fun postComment(@Body request: CommentRequest): Comment
+
+    @GET("api/comments/moment/{momentId}")
+    suspend fun getMomentComments(@Path("momentId") momentId: String): List<Comment>
 }

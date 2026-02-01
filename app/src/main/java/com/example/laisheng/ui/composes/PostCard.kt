@@ -5,7 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -14,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,7 +35,6 @@ fun PostCard(
     onCommentClick: () -> Unit = {},
     onBookmarkClick: () -> Unit = {}
 ) {
-    // --- 修改点：直接从 moment 取值，不需要 moment.user ---
     val nickname = moment.nickname ?: "未知用户"
     val handle = moment.handle ?: ""
     val content = moment.content ?: ""
@@ -45,10 +47,6 @@ fun PostCard(
             .clickable(onClick = onCardClick)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        // ... (中间的 UI 代码完全不用动，省略以节省空间) ...
-        // ... 保持 Row, Column, Text 等布局代码不变 ...
-
-        // --- 用户信息栏 (这里不用改，因为上面已经定义了 nickname 变量) ---
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -91,7 +89,6 @@ fun PostCard(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // --- 正文 ---
         Text(
             text = content,
             style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp, letterSpacing = 0.5.sp),
@@ -101,14 +98,12 @@ fun PostCard(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 装饰条
         Box(
             modifier = Modifier.width(32.dp).height(4.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // --- 底部栏 ---
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -120,11 +115,35 @@ fun PostCard(
                 color = MaterialTheme.colorScheme.outline
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                PostActionItem(Icons.Outlined.FavoriteBorder, moment.likesCount, "点赞", onLikeClick)
+                // 点赞：根据 isLiked 切换颜色和图标
+                PostActionItem(
+                    icon = if (moment.isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    count = moment.likesCount,
+                    contentDescription = "点赞",
+                    tint = if (moment.isLiked) Color.Red else MaterialTheme.colorScheme.outline,
+                    onClick = onLikeClick
+                )
+                
                 Spacer(modifier = Modifier.width(16.dp))
-                PostActionItem(Icons.Outlined.ChatBubbleOutline, moment.commentsCount, "评论", onCommentClick)
+                
+                PostActionItem(
+                    icon = Icons.Outlined.ChatBubbleOutline,
+                    count = moment.commentsCount,
+                    contentDescription = "评论",
+                    onClick = onCommentClick
+                )
+                
                 Spacer(modifier = Modifier.width(16.dp))
-                Icon(Icons.Outlined.BookmarkBorder, "收藏", tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(24.dp).clickable(onClick = onBookmarkClick).padding(2.dp))
+                
+                // 收藏：根据 isCollected 切换颜色和图标
+                IconButton(onClick = onBookmarkClick, modifier = Modifier.size(24.dp)) {
+                    Icon(
+                        imageVector = if (moment.isCollected) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
+                        contentDescription = "收藏",
+                        tint = if (moment.isCollected) Color(0xFFFFB300) else MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -132,14 +151,34 @@ fun PostCard(
     }
 }
 
-// 辅助组件和函数保持不变
 @Composable
-private fun PostActionItem(icon: ImageVector, count: Int, contentDescription: String, onClick: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clip(CircleShape).clickable(onClick = onClick).padding(4.dp)) {
-        Icon(icon, contentDescription, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(20.dp))
+private fun PostActionItem(
+    icon: ImageVector,
+    count: Int,
+    contentDescription: String,
+    tint: Color = MaterialTheme.colorScheme.outline,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(CircleShape)
+            .clickable(onClick = onClick)
+            .padding(4.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(20.dp)
+        )
         if (count > 0) {
             Spacer(modifier = Modifier.width(4.dp))
-            Text(count.toString(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = tint
+            )
         }
     }
 }
@@ -148,7 +187,6 @@ private fun formatTime(isoString: String): String {
     return try { if (isoString.length >= 10) isoString.substring(0, 10) else isoString } catch (e: Exception) { "刚刚" }
 }
 
-// --- 修改点：预览也要更新，去掉嵌套的 User ---
 @Preview(showBackground = true)
 @Composable
 fun PostCardPreview() {
@@ -156,15 +194,14 @@ fun PostCardPreview() {
         val mockMoment = Moment(
             id = "1",
             userId = "u1",
-            content = "这是一条测试内容，现在直接读取扁平数据。",
+            content = "这是一条测试内容，点赞变红了！",
             likesCount = 128,
             commentsCount = 64,
             createdAt = "2023-10-27T10:00:00Z",
-
-            // 直接赋值，不再需要 User(...)
             nickname = "Lisa Wong",
             handle = "@lisa_art",
-            avatar = "https://..."
+            avatar = "https://...",
+            isLiked = true
         )
         PostCard(moment = mockMoment)
     }

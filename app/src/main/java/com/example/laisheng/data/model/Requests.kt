@@ -13,3 +13,22 @@ data class ToggleRequest(
     @SerializedName("user_id") val userId: String,
     @SerializedName("moment_id") val momentId: String
 )
+
+// 评论请求体
+data class CommentRequest(
+    @SerializedName("user_id") val userId: String,
+    @SerializedName("moment_id") val momentId: String,
+    val content: String
+)
+
+// 评论返回实体
+data class Comment(
+    val id: String,
+    @SerializedName("user_id") val userId: String,
+    @SerializedName("moment_id") val momentId: String,
+    val content: String,
+    @SerializedName("created_at") val createdAt: String,
+    // 连带的用户信息（通常后端会 join user 表返回）
+    val nickname: String?,
+    val avatar: String?
+)
