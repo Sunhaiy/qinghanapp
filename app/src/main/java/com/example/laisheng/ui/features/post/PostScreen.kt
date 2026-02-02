@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,16 +39,26 @@ fun PostScreen(
 ) {
     val context = LocalContext.current
     var content by remember { mutableStateOf("") }
-    // 修改点 1：支持多图 URI 列表
     val selectedImageUris = remember { mutableStateListOf<Uri>() }
     
+    // 音频相关状态
+    var selectedVoiceUri by remember { mutableStateOf<Uri?>(null) }
+    var voiceDuration by remember { mutableStateOf(0) }
+
     val uiState by viewModel.uiState.collectAsState()
 
-    // 修改点 2：改为 PickMultipleVisualMedia
+    // 图片选择器
     val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(9), // 最多选 9 张
-        onResult = { uris -> 
-            selectedImageUris.addAll(uris) 
+        contract = ActivityResultContracts.PickMultipleVisualMedia(9),
+        onResult = { uris -> selectedImageUris.addAll(uris) }
+    )
+
+    // 音频选择器 (暂时使用文件选择器模拟录音结果)
+    val audioPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri -> 
+            selectedVoiceUri = uri 
+            voiceDuration = 10 // 模拟时长，实际开发中建议从文件元数据获取
         }
     )
 
@@ -78,10 +90,16 @@ fun PostScreen(
                 Text("发布瞬间", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 Button(
                     onClick = { 
-                        // 修改点 3：传递列表给 ViewModel
-                        viewModel.createMoment(userId, content, selectedImageUris.toList(), context) 
+                        viewModel.createMoment(
+                            userId = userId, 
+                            contentText = content, 
+                            imageUris = selectedImageUris.toList(), 
+                            voiceUri = selectedVoiceUri,
+                            voiceDuration = voiceDuration,
+                            context = context
+                        ) 
                     },
-                    enabled = (content.isNotBlank() || selectedImageUris.isNotEmpty()) && uiState !is PostUiState.Loading,
+                    enabled = (content.isNotBlank() || selectedImageUris.isNotEmpty() || selectedVoiceUri != null) && uiState !is PostUiState.Loading,
                     shape = RoundedCornerShape(20.dp)
                 ) {
                     if (uiState is PostUiState.Loading) {
@@ -109,11 +127,12 @@ fun PostScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 修改点 4：横向预览多图
+            // 预览区域 (图片和音频)
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
+                // 图片预览
                 items(selectedImageUris) { uri ->
                     Box(modifier = Modifier.size(100.dp)) {
                         AsyncImage(
@@ -135,26 +154,71 @@ fun PostScreen(
                         }
                     }
                 }
-                
-                // 如果图片少于 9 张，显示添加按钮
-                if (selectedImageUris.size < 9) {
+
+                // 音频预览
+                selectedVoiceUri?.let {
                     item {
-                        Surface(
-                            onClick = { 
-                                photoPickerLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                ) 
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.size(100.dp)
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+                        Box(modifier = Modifier.size(100.dp), contentAlignment = Alignment.Center) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                modifier = Modifier.fillMaxSize()
                             ) {
-                                Icon(Icons.Default.AddPhotoAlternate, null, tint = Color.Gray)
-                                Text("添加图片", fontSize = 12.sp, color = Color.Gray)
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(Icons.Default.PlayArrow, null)
+                                    Text("${voiceDuration}\"", fontSize = 12.sp)
+                                }
+                            }
+                            IconButton(
+                                onClick = { selectedVoiceUri = null },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(20.dp)
+                                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                            ) {
+                                Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                            }
+                        }
+                    }
+                }
+                
+                // 添加按钮区
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // 添加图片
+                        if (selectedImageUris.size < 9) {
+                            Surface(
+                                onClick = { 
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    ) 
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.size(100.dp)
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                    Icon(Icons.Default.AddPhotoAlternate, null, tint = Color.Gray)
+                                    Text("图片", fontSize = 12.sp, color = Color.Gray)
+                                }
+                            }
+                        }
+
+                        // 添加音频 (模拟录音)
+                        if (selectedVoiceUri == null) {
+                            Surface(
+                                onClick = { audioPickerLauncher.launch("audio/*") },
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.size(100.dp)
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                    Icon(Icons.Default.Mic, null, tint = Color.Gray)
+                                    Text("语音", fontSize = 12.sp, color = Color.Gray)
+                                }
                             }
                         }
                     }

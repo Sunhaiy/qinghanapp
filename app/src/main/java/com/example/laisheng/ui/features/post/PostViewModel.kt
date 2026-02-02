@@ -29,7 +29,14 @@ class PostViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<PostUiState>(PostUiState.Idle)
     val uiState = _uiState.asStateFlow()
 
-    fun createMoment(userId: String, contentText: String, imageUris: List<Uri>, context: Context) {
+    fun createMoment(
+        userId: String,
+        contentText: String,
+        imageUris: List<Uri>,
+        voiceUri: Uri?,
+        voiceDuration: Int,
+        context: Context
+    ) {
         viewModelScope.launch {
             _uiState.value = PostUiState.Loading
             try {
@@ -37,7 +44,7 @@ class PostViewModel : ViewModel() {
 
                 // 1. 循环上传所有图片
                 imageUris.forEach { uri ->
-                    val file = uriToFile(context, uri)
+                    val file = uriToFile(context, uri, "image")
                     if (file != null) {
                         val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
                         val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
@@ -46,17 +53,38 @@ class PostViewModel : ViewModel() {
                     }
                 }
 
-                // 2. 构造 content 对象
+                // 2. 上传音频
+                voiceUri?.let { uri ->
+                    val file = uriToFile(context, uri, "audio")
+                    if (file != null) {
+                        val requestFile = file.asRequestBody("audio/*".toMediaTypeOrNull())
+                        val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
+                        val uploadResponse = NetworkModule.apiService.uploadFile(body)
+                        attachments.add(
+                            Attachment(
+                                type = "voice",
+                                url = uploadResponse.url,
+                                duration = voiceDuration
+                            )
+                        )
+                    }
+                }
+
+                // 3. 构造 content 对象并判定类型
+                val type = when {
+                    attachments.any { it.type == "image" } && attachments.any { it.type == "voice" } -> "mixed"
+                    attachments.any { it.type == "voice" } -> "voice"
+                    attachments.any { it.type == "image" } -> "image"
+                    else -> "text"
+                }
+
                 val content = MomentContent(
                     text = contentText,
-                    type = when {
-                        attachments.isNotEmpty() -> "image"
-                        else -> "text"
-                    },
+                    type = type,
                     attachments = if (attachments.isNotEmpty()) attachments else null
                 )
 
-                // 3. 调用发布接口
+                // 4. 调用发布接口
                 NetworkModule.apiService.createMoment(
                     CreateMomentRequest(userId = userId, content = content)
                 )
@@ -69,10 +97,11 @@ class PostViewModel : ViewModel() {
         }
     }
 
-    private fun uriToFile(context: Context, uri: Uri): File? {
+    private fun uriToFile(context: Context, uri: Uri, prefix: String): File? {
         return try {
             val inputStream = context.contentResolver.openInputStream(uri)
-            val file = File(context.cacheDir, "upload_image_${System.currentTimeMillis()}_${(0..1000).random()}.jpg")
+            val extension = if (prefix == "image") "jpg" else "mp3"
+            val file = File(context.cacheDir, "${prefix}_${System.currentTimeMillis()}.$extension")
             val outputStream = FileOutputStream(file)
             inputStream?.copyTo(outputStream)
             inputStream?.close()
