@@ -29,32 +29,31 @@ class PostViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<PostUiState>(PostUiState.Idle)
     val uiState = _uiState.asStateFlow()
 
-    fun createMoment(userId: String, contentText: String, imageUri: Uri?, context: Context) {
+    fun createMoment(userId: String, contentText: String, imageUris: List<Uri>, context: Context) {
         viewModelScope.launch {
             _uiState.value = PostUiState.Loading
             try {
-                var uploadedUrl: String? = null
+                val attachments = mutableListOf<Attachment>()
 
-                // 1. 如果有图片，先上传
-                imageUri?.let { uri ->
+                // 1. 循环上传所有图片
+                imageUris.forEach { uri ->
                     val file = uriToFile(context, uri)
                     if (file != null) {
                         val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
                         val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
                         val uploadResponse = NetworkModule.apiService.uploadFile(body)
-                        uploadedUrl = uploadResponse.url
+                        attachments.add(Attachment(type = "image", url = uploadResponse.url))
                     }
                 }
 
-                // 2. 构造符合 JSONB 结构的 content 对象
-                val attachments = if (uploadedUrl != null) {
-                    listOf(Attachment(type = "image", url = uploadedUrl!!))
-                } else null
-
+                // 2. 构造 content 对象
                 val content = MomentContent(
                     text = contentText,
-                    type = if (uploadedUrl != null) "image" else "text",
-                    attachments = attachments
+                    type = when {
+                        attachments.isNotEmpty() -> "image"
+                        else -> "text"
+                    },
+                    attachments = if (attachments.isNotEmpty()) attachments else null
                 )
 
                 // 3. 调用发布接口
@@ -73,7 +72,7 @@ class PostViewModel : ViewModel() {
     private fun uriToFile(context: Context, uri: Uri): File? {
         return try {
             val inputStream = context.contentResolver.openInputStream(uri)
-            val file = File(context.cacheDir, "upload_image_${System.currentTimeMillis()}.jpg")
+            val file = File(context.cacheDir, "upload_image_${System.currentTimeMillis()}_${(0..1000).random()}.jpg")
             val outputStream = FileOutputStream(file)
             inputStream?.copyTo(outputStream)
             inputStream?.close()

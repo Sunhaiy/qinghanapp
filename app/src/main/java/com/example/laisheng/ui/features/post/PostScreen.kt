@@ -6,6 +6,8 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -35,14 +37,17 @@ fun PostScreen(
 ) {
     val context = LocalContext.current
     var content by remember { mutableStateOf("") }
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    // 修改点 1：支持多图 URI 列表
+    val selectedImageUris = remember { mutableStateListOf<Uri>() }
     
     val uiState by viewModel.uiState.collectAsState()
 
-    // 图片选择器
+    // 修改点 2：改为 PickMultipleVisualMedia
     val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri -> selectedImageUri = uri }
+        contract = ActivityResultContracts.PickMultipleVisualMedia(9), // 最多选 9 张
+        onResult = { uris -> 
+            selectedImageUris.addAll(uris) 
+        }
     )
 
     LaunchedEffect(uiState) {
@@ -62,7 +67,6 @@ fun PostScreen(
                 .padding(16.dp)
                 .fillMaxWidth()
         ) {
-            // 顶部栏
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -73,8 +77,11 @@ fun PostScreen(
                 }
                 Text("发布瞬间", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 Button(
-                    onClick = { viewModel.createMoment(userId, content, selectedImageUri, context) },
-                    enabled = (content.isNotBlank() || selectedImageUri != null) && uiState !is PostUiState.Loading,
+                    onClick = { 
+                        // 修改点 3：传递列表给 ViewModel
+                        viewModel.createMoment(userId, content, selectedImageUris.toList(), context) 
+                    },
+                    enabled = (content.isNotBlank() || selectedImageUris.isNotEmpty()) && uiState !is PostUiState.Loading,
                     shape = RoundedCornerShape(20.dp)
                 ) {
                     if (uiState is PostUiState.Loading) {
@@ -87,7 +94,6 @@ fun PostScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 输入框
             OutlinedTextField(
                 value = content,
                 onValueChange = { content = it },
@@ -103,46 +109,54 @@ fun PostScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 图片预览或添加按钮
-            if (selectedImageUri != null) {
-                Box(modifier = Modifier.size(120.dp)) {
-                    AsyncImage(
-                        model = selectedImageUri,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                    // 删除图片的按钮
-                    IconButton(
-                        onClick = { selectedImageUri = null },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .size(24.dp)
-                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
-                    ) {
-                        Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(16.dp))
+            // 修改点 4：横向预览多图
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(selectedImageUris) { uri ->
+                    Box(modifier = Modifier.size(100.dp)) {
+                        AsyncImage(
+                            model = uri,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        IconButton(
+                            onClick = { selectedImageUris.remove(uri) },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(20.dp)
+                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        ) {
+                            Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                        }
                     }
                 }
-            } else {
-                // 添加图片按钮
-                Surface(
-                    onClick = { 
-                        photoPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        ) 
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.size(100.dp)
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(Icons.Default.AddPhotoAlternate, null, tint = Color.Gray)
-                        Text("添加图片", fontSize = 12.sp, color = Color.Gray)
+                
+                // 如果图片少于 9 张，显示添加按钮
+                if (selectedImageUris.size < 9) {
+                    item {
+                        Surface(
+                            onClick = { 
+                                photoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                ) 
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.size(100.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(Icons.Default.AddPhotoAlternate, null, tint = Color.Gray)
+                                Text("添加图片", fontSize = 12.sp, color = Color.Gray)
+                            }
+                        }
                     }
                 }
             }
