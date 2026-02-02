@@ -4,6 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -37,11 +39,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.laisheng.navigation.Route
+import com.example.laisheng.ui.features.detail.MomentDetailScreen
 import com.example.laisheng.ui.features.explore.ExploreScreen
 import com.example.laisheng.ui.features.home.HomeScreen
 import com.example.laisheng.ui.features.login.LoginScreen
@@ -67,22 +72,20 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Laisheng() {
     val context = LocalContext.current
     val userPrefs = remember { UserPrefs(context) }
     
-    // 初始状态尝试从本地持久化存储中获取
     var loggedInUserId by remember { mutableStateOf(userPrefs.getUserId()) }
 
     if (loggedInUserId == null) {
-        // 未登录时显示登录界面
         LoginScreen(onLoginSuccess = { userId ->
-            userPrefs.saveUserId(userId) // 登录成功，保存 ID 到本地
+            userPrefs.saveUserId(userId)
             loggedInUserId = userId
         })
     } else {
-        // 已登录时显示主界面
         val userId = loggedInUserId ?: ""
         val hazeState = rememberHazeState()
         val navController = rememberNavController()
@@ -110,44 +113,70 @@ fun Laisheng() {
 
         Scaffold(
             topBar = {
-                TopBar(
-                    hazeState = hazeState,
-                    currentRoute = currentRoute
-                )
+                if (currentRoute != "moment_detail/{momentId}") {
+                    TopBar(
+                        hazeState = hazeState,
+                        currentRoute = currentRoute
+                    )
+                }
             },
             bottomBar = {
-                BottomNavigation(
-                    hazeState = hazeState,
-                    navController = navController,
-                    items = items,
-                    onPostClick = { showPostDialog = true }
-                )
+                if (currentRoute != "moment_detail/{momentId}") {
+                    BottomNavigation(
+                        hazeState = hazeState,
+                        navController = navController,
+                        items = items,
+                        onPostClick = { showPostDialog = true }
+                    )
+                }
             }
         ) { paddingValues ->
-            NavHost(
-                navController = navController,
-                startDestination = Route.Home.route
-            ) {
-                composable(Route.Home.route) {
-                    HomeScreen(hazeState, paddingValues)
-                }
-                composable(Route.Explore.route) {
-                    Box(modifier = Modifier.fillMaxSize()) {
+            // 使用 SharedTransitionLayout 开启共享元素过渡
+            SharedTransitionLayout {
+                NavHost(
+                    navController = navController,
+                    startDestination = Route.Home.route
+                ) {
+                    composable(Route.Home.route) {
+                        HomeScreen(hazeState, paddingValues)
+                    }
+                    composable(Route.Explore.route) {
                         ExploreScreen(
                             hazeState = hazeState,
                             paddingValues = paddingValues,
-                            userId = userId
+                            userId = userId,
+                            onMomentClick = { momentId ->
+                                navController.navigate("moment_detail/$momentId")
+                            },
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this@composable
                         )
                     }
-                }
-                composable(Route.Message.route) {
-                    Box(modifier = Modifier.padding(paddingValues)) {
-                        MessageScreen(hazeState)
+                    composable(Route.Message.route) {
+                        Box(modifier = Modifier.padding(paddingValues)) {
+                            MessageScreen(hazeState)
+                        }
                     }
-                }
-                composable(Route.Mine.route) {
-                    Box(modifier = Modifier.padding(paddingValues)) {
-                        MineScreen(hazeState)
+                    composable(Route.Mine.route) {
+                        MineScreen(
+                            hazeState = hazeState,
+                            userId = userId,
+                            paddingValues = paddingValues
+                        )
+                    }
+                    
+                    composable(
+                        route = "moment_detail/{momentId}",
+                        arguments = listOf(navArgument("momentId") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val momentId = backStackEntry.arguments?.getString("momentId") ?: ""
+                        MomentDetailScreen(
+                            momentId = momentId,
+                            userId = userId,
+                            onBack = { navController.popBackStack() },
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this@composable
+                        )
                     }
                 }
             }

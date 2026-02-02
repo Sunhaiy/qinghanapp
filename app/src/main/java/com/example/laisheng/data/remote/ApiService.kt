@@ -24,6 +24,20 @@ interface ApiService {
         @Query("current_user_id") currentUserId: String? = null
     ): MomentResponse
 
+    @GET("api/moments/{id}")
+    suspend fun getMomentDetail(
+        @Path("id") id: String,
+        @Query("current_user_id") currentUserId: String? = null
+    ): Moment
+
+    @GET("api/moments/user/{userId}")
+    suspend fun getUserMoments(
+        @Path("userId") userId: String,
+        @Query("page") page: Int? = 1,
+        @Query("limit") limit: Int? = 10,
+        @Query("current_user_id") currentUserId: String? = null
+    ): MomentResponse
+
     @POST("api/moments")
     suspend fun createMoment(@Body request: CreateMomentRequest): Moment
 
