@@ -52,19 +52,24 @@ dependencies {
     // 为 HorizontalPager 添加 foundation 依赖
     implementation("androidx.compose.foundation:foundation")
     
-    // 加上这一行，以支持扩展图标（如 MoreHoriz, BookmarkBorder, ChatBubbleOutline 等）
+    // 加上这一行，以支持扩展图标
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Haze 核心功能 (hazeSource, hazeEffect, HazeState)
+    // Haze
     implementation("dev.chrisbanes.haze:haze:1.6.10")
-
-    // Haze 材质预设 (HazeMaterials.ultraThin() 等)
     implementation("dev.chrisbanes.haze:haze-materials:1.6.10")
 
     implementation("androidx.navigation:navigation-compose:2.8.0")
+    
     // Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    
+    // Coil (用于加载网络图片)
+    implementation("io.coil-kt:coil-compose:2.7.0")
+    // 添加 SVG 支持
+    implementation("io.coil-kt:coil-svg:2.7.0")
+
     implementation(libs.androidx.compose.foundation.layout)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

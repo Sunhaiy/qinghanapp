@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName
 // 发布瞬间的请求体
 data class CreateMomentRequest(
     @SerializedName("user_id") val userId: String,
-    val content: String
+    val content: MomentContent // 修改这里：改为 MomentContent 对象以适配 JSONB
 )
 
 // 点赞/收藏请求体
@@ -28,7 +28,6 @@ data class Comment(
     @SerializedName("moment_id") val momentId: String,
     val content: String,
     @SerializedName("created_at") val createdAt: String,
-    // 连带的用户信息（通常后端会 join user 表返回）
     val nickname: String?,
     val avatar: String?
 )

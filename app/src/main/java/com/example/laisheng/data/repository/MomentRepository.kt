@@ -6,22 +6,21 @@ import com.example.laisheng.data.remote.ApiService
 class MomentRepository(private val apiService: ApiService) {
 
     // 1.登录逻辑
-    suspend fun login(handle: String): User? {
+    suspend fun login(handle: String, password: String): User? {
         return try {
-            apiService.login(mapOf("handle" to handle))
+            apiService.login(mapOf("handle" to handle, "password" to password))
         } catch (e: Exception) {
             null
         }
     }
 
-    // 2. 获取瞬间列表 (支持传入当前用户 ID 以获取点赞/收藏状态)
-    suspend fun getMoments(currentUserId: String? = null): List<Moment> {
+    // 2. 获取瞬间列表 (支持分页)
+    suspend fun getMoments(page: Int = 1, limit: Int = 10, currentUserId: String? = null): MomentResponse? {
         return try {
-            val response = apiService.getMoments(currentUserId)
-            response.data
+            apiService.getMoments(page, limit, currentUserId)
         } catch (e: Exception) {
             e.printStackTrace()
-            emptyList()
+            null
         }
     }
 

@@ -19,11 +19,48 @@ class ExploreViewModel : ViewModel() {
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing = _isRefreshing.asStateFlow()
 
+    // 分页状态
+    private var currentPage = 1
+    private var isEndReached = false
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore = _isLoadingMore.asStateFlow()
+
     fun refresh(userId: String? = null) {
         viewModelScope.launch {
             _isRefreshing.value = true
-            _moments.value = repository.getMoments(userId)
+            currentPage = 1
+            isEndReached = false
+            val response = repository.getMoments(page = currentPage, currentUserId = userId)
+            if (response != null) {
+                _moments.value = response.data
+                if (response.data.isEmpty() || response.data.size < response.limit) {
+                    isEndReached = true
+                }
+            }
             _isRefreshing.value = false
+        }
+    }
+
+    fun loadNextPage(userId: String? = null) {
+        if (_isLoadingMore.value || isEndReached) return
+
+        viewModelScope.launch {
+            _isLoadingMore.value = true
+            val nextPage = currentPage + 1
+            val response = repository.getMoments(page = nextPage, currentUserId = userId)
+            
+            if (response != null) {
+                if (response.data.isNotEmpty()) {
+                    _moments.value = _moments.value + response.data
+                    currentPage = nextPage
+                }
+                if (response.data.size < response.limit) {
+                    isEndReached = true
+                }
+            } else {
+                isEndReached = true
+            }
+            _isLoadingMore.value = false
         }
     }
 

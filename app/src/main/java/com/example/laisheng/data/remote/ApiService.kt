@@ -1,6 +1,7 @@
 package com.example.laisheng.data.remote
 
 import com.example.laisheng.data.model.*
+import okhttp3.MultipartBody
 import retrofit2.http.*
 
 interface ApiService {
@@ -18,6 +19,8 @@ interface ApiService {
     // --- 瞬间 (Moments) 相关 ---
     @GET("api/moments")
     suspend fun getMoments(
+        @Query("page") page: Int? = 1,
+        @Query("limit") limit: Int? = 10,
         @Query("current_user_id") currentUserId: String? = null
     ): MomentResponse
 
@@ -40,4 +43,11 @@ interface ApiService {
 
     @GET("api/comments/moment/{momentId}")
     suspend fun getMomentComments(@Path("momentId") momentId: String): List<Comment>
+
+    // --- 上传相关 ---
+    @Multipart
+    @POST("api/upload/single")
+    suspend fun uploadFile(
+        @Part file: MultipartBody.Part
+    ): UploadResponse
 }

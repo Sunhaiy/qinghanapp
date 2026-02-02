@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,6 +49,7 @@ import com.example.laisheng.ui.features.message.MessageScreen
 import com.example.laisheng.ui.features.mine.MineScreen
 import com.example.laisheng.ui.features.post.PostScreen
 import com.example.laisheng.ui.theme.LaishengTheme
+import com.example.laisheng.util.UserPrefs
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.materials.HazeMaterials
@@ -67,12 +69,16 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Laisheng() {
-    // 状态管理：记录当前登录的用户 ID
-    var loggedInUserId by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val userPrefs = remember { UserPrefs(context) }
+    
+    // 初始状态尝试从本地持久化存储中获取
+    var loggedInUserId by remember { mutableStateOf(userPrefs.getUserId()) }
 
     if (loggedInUserId == null) {
         // 未登录时显示登录界面
         LoginScreen(onLoginSuccess = { userId ->
+            userPrefs.saveUserId(userId) // 登录成功，保存 ID 到本地
             loggedInUserId = userId
         })
     } else {

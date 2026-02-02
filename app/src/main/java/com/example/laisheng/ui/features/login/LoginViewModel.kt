@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.laisheng.data.NetworkModule
 import com.example.laisheng.data.model.User
-import com.example.laisheng.data.repository.MomentRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -17,25 +16,53 @@ sealed class LoginUiState {
 }
 
 class LoginViewModel : ViewModel() {
-    private val repository = MomentRepository(NetworkModule.apiService)
-
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState = _uiState.asStateFlow()
 
-    fun login(handle: String) {
-        if (handle.isBlank()) {
-            _uiState.value = LoginUiState.Error("请输入 Handle")
+    fun login(handle: String, password: String) {
+        if (handle.isBlank() || password.isBlank()) {
+            _uiState.value = LoginUiState.Error("请输入 Handle 和密码")
             return
         }
 
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
-            val user = repository.login(handle)
-            if (user != null) {
-                _uiState.value = LoginUiState.Success(user)
-            } else {
-                _uiState.value = LoginUiState.Error("登录失败，用户不存在")
+            try {
+                val response = NetworkModule.apiService.login(
+                    mapOf("handle" to handle, "password" to password)
+                )
+                _uiState.value = LoginUiState.Success(response)
+            } catch (e: Exception) {
+                _uiState.value = LoginUiState.Error("登录失败：账号或密码错误")
             }
         }
+    }
+
+    fun register(handle: String, password: String, nickname: String, avatar: String) {
+        if (handle.isBlank() || password.isBlank() || nickname.isBlank()) {
+            _uiState.value = LoginUiState.Error("请填写完整注册信息")
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = LoginUiState.Loading
+            try {
+                val response = NetworkModule.apiService.register(
+                    mapOf(
+                        "handle" to handle,
+                        "password" to password,
+                        "nickname" to nickname,
+                        "avatar" to avatar
+                    )
+                )
+                _uiState.value = LoginUiState.Success(response)
+            } catch (e: Exception) {
+                _uiState.value = LoginUiState.Error("注册失败：该 Handle 可能已被占用")
+            }
+        }
+    }
+
+    fun resetState() {
+        _uiState.value = LoginUiState.Idle
     }
 }
