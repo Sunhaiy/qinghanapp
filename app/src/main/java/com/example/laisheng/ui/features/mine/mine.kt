@@ -25,6 +25,7 @@ import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import com.example.laisheng.data.NetworkModule
+import com.example.laisheng.data.model.FollowCounts
 import com.example.laisheng.data.model.User
 import com.example.laisheng.ui.composes.PostCard
 import dev.chrisbanes.haze.HazeState
@@ -35,7 +36,7 @@ import dev.chrisbanes.haze.hazeSource
 fun MineScreen(
     hazeState: HazeState,
     userId: String,
-    paddingValues: PaddingValues, // 接收来自 Scaffold 的边距
+    paddingValues: PaddingValues,
     viewModel: MineViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -50,7 +51,7 @@ fun MineScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .hazeSource(state = hazeState) // 核心：让全屏内容都成为模糊源
+            .hazeSource(state = hazeState)
     ) {
         PullToRefreshBox(
             isRefreshing = isRefreshing,
@@ -66,11 +67,10 @@ fun MineScreen(
                 is MineUiState.Success -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        // 关键：将边距应用在这里，确保内容不被遮挡，但背景可以延伸过去
-                        contentPadding = paddingValues 
+                        contentPadding = paddingValues
                     ) {
                         item {
-                            ProfileHeader(state.user)
+                            ProfileHeader(state.user, state.followCounts)
                         }
 
                         item {
@@ -85,8 +85,8 @@ fun MineScreen(
                         itemsIndexed(state.moments) { index, moment ->
                             PostCard(
                                 moment = moment,
-                                onLikeClick = { /* 点赞逻辑 */ },
-                                onBookmarkClick = { /* 收藏逻辑 */ }
+                                onLikeClick = { /* logic handled in Card if needed */ },
+                                onBookmarkClick = { /* logic handled in Card if needed */ }
                             )
                             
                             if (index >= state.moments.size - 2) {
@@ -119,7 +119,7 @@ fun MineScreen(
 }
 
 @Composable
-fun ProfileHeader(user: User) {
+fun ProfileHeader(user: User, followCounts: FollowCounts) {
     val context = LocalContext.current
     
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -154,7 +154,22 @@ fun ProfileHeader(user: User) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Gray
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                
+                // 新增：关注和粉丝数显示
+                Row(modifier = Modifier.padding(vertical = 8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = followCounts.followingCount.toString(), fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "关注", color = Color.Gray, fontSize = 14.sp)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = followCounts.followersCount.toString(), fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "粉丝", color = Color.Gray, fontSize = 14.sp)
+                    }
+                }
+
                 Text(
                     text = user.bio ?: "这个用户很懒，什么都没写",
                     style = MaterialTheme.typography.bodyMedium

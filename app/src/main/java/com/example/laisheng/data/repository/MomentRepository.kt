@@ -103,4 +103,24 @@ class MomentRepository(private val apiService: ApiService) {
             null
         }
     }
+
+    // 11. 获取关注/粉丝数 (新增封装)
+    suspend fun getFollowCounts(userId: String): FollowCounts? {
+        return try {
+            apiService.getFollowCounts(userId)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    // 12. 获取聊天列表 (新增封装)
+    suspend fun getChatList(userId: String): List<ChatListItem> {
+        return try {
+            apiService.getChatList(userId)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
 }

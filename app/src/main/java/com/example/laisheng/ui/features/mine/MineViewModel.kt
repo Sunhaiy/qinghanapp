@@ -3,6 +3,7 @@ package com.example.laisheng.ui.features.mine
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.laisheng.data.NetworkModule
+import com.example.laisheng.data.model.FollowCounts
 import com.example.laisheng.data.model.Moment
 import com.example.laisheng.data.model.User
 import com.example.laisheng.data.repository.MomentRepository
@@ -12,7 +13,11 @@ import kotlinx.coroutines.launch
 
 sealed class MineUiState {
     object Loading : MineUiState()
-    data class Success(val user: User, val moments: List<Moment>) : MineUiState()
+    data class Success(
+        val user: User, 
+        val moments: List<Moment>,
+        val followCounts: FollowCounts
+    ) : MineUiState()
     data class Error(val message: String) : MineUiState()
 }
 
@@ -37,10 +42,10 @@ class MineViewModel : ViewModel() {
             }
 
             try {
-                // 1. 获取用户信息
+                // 并行获取数据
                 val user = repository.getUserProfile(userId)
-                // 2. 获取用户动态
                 val response = repository.getUserMoments(userId, page = currentPage, currentUserId = userId)
+                val followCounts = repository.getFollowCounts(userId) ?: FollowCounts(0, 0)
 
                 if (user != null && response != null) {
                     val currentMoments = if (isRefresh) response.data else {
@@ -48,7 +53,7 @@ class MineViewModel : ViewModel() {
                         current + response.data
                     }
                     
-                    _uiState.value = MineUiState.Success(user, currentMoments)
+                    _uiState.value = MineUiState.Success(user, currentMoments, followCounts)
                     
                     if (response.data.size < response.limit) {
                         isEndReached = true

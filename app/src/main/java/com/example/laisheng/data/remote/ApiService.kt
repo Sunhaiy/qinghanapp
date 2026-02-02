@@ -51,12 +51,34 @@ interface ApiService {
     @GET("api/collections/user/{userId}")
     suspend fun getUserCollections(@Path("userId") userId: String): List<Moment>
 
+    // --- 关注相关 ---
+    @POST("api/follows/toggle")
+    suspend fun toggleFollow(@Body request: Map<String, String>): Map<String, Boolean>
+
+    @GET("api/follows/counts/{userId}")
+    suspend fun getFollowCounts(@Path("userId") userId: String): FollowCounts
+
     // --- 评论相关 ---
     @POST("api/comments")
     suspend fun postComment(@Body request: CommentRequest): Comment
 
     @GET("api/comments/moment/{momentId}")
     suspend fun getMomentComments(@Path("momentId") momentId: String): List<Comment>
+
+    // --- 私信相关 ---
+    @POST("api/messages")
+    suspend fun sendMessage(@Body request: SendMessageRequest): ChatMessage
+
+    @GET("api/messages/chat-list/{userId}")
+    suspend fun getChatList(@Path("userId") userId: String): List<ChatListItem>
+
+    @GET("api/messages/history/{userId1}/{userId2}")
+    suspend fun getChatHistory(
+        @Path("userId1") userId1: String,
+        @Path("userId2") userId2: String,
+        @Query("page") page: Int? = 1,
+        @Query("limit") limit: Int? = 50
+    ): List<ChatMessage>
 
     // --- 上传相关 ---
     @Multipart

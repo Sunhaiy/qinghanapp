@@ -131,7 +131,6 @@ fun Laisheng() {
                 }
             }
         ) { paddingValues ->
-            // 使用 SharedTransitionLayout 开启共享元素过渡
             SharedTransitionLayout {
                 NavHost(
                     navController = navController,
@@ -153,9 +152,11 @@ fun Laisheng() {
                         )
                     }
                     composable(Route.Message.route) {
-                        Box(modifier = Modifier.padding(paddingValues)) {
-                            MessageScreen(hazeState)
-                        }
+                        MessageScreen(
+                            hazeState = hazeState,
+                            userId = userId,
+                            paddingValues = paddingValues
+                        )
                     }
                     composable(Route.Mine.route) {
                         MineScreen(
