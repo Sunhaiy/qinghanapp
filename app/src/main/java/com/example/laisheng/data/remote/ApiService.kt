@@ -16,6 +16,12 @@ interface ApiService {
     @GET("api/users/{id}")
     suspend fun getUser(@Path("id") id: String): User
 
+    @PUT("api/users/{id}")
+    suspend fun updateProfile(
+        @Path("id") id: String,
+        @Body profile: Map<String, String?>
+    ): User
+
     // --- 瞬间 (Moments) 相关 ---
     @GET("api/moments")
     suspend fun getMoments(
@@ -51,12 +57,24 @@ interface ApiService {
     @GET("api/collections/user/{userId}")
     suspend fun getUserCollections(@Path("userId") userId: String): List<Moment>
 
+    @GET("api/likes/user/{userId}")
+    suspend fun getUserLikedMoments(@Path("userId") userId: String): List<Moment>
+
     // --- 关注相关 ---
     @POST("api/follows/toggle")
     suspend fun toggleFollow(@Body request: Map<String, String>): Map<String, Boolean>
 
     @GET("api/follows/counts/{userId}")
     suspend fun getFollowCounts(@Path("userId") userId: String): FollowCounts
+
+    @GET("api/follows/followers/{userId}")
+    suspend fun getFollowers(@Path("userId") userId: String): List<User>
+
+    @GET("api/follows/following/{userId}")
+    suspend fun getFollowing(@Path("userId") userId: String): List<User>
+
+    @GET("api/follows/mutual/{userId}")
+    suspend fun getMutualFollowing(@Path("userId") userId: String): List<User>
 
     // --- 评论相关 ---
     @POST("api/comments")

@@ -2,6 +2,7 @@ package com.example.laisheng.ui.features.mine
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -37,10 +38,13 @@ fun MineScreen(
     hazeState: HazeState,
     userId: String,
     paddingValues: PaddingValues,
+    onFollowClick: (String, String, String) -> Unit,
+    onEditClick: (String, String, String, String?, String?) -> Unit, // 修正：改为 5 个参数，加入 handle
     viewModel: MineViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val selectedTab by viewModel.selectedTab.collectAsState()
 
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) {
@@ -70,40 +74,62 @@ fun MineScreen(
                         contentPadding = paddingValues
                     ) {
                         item {
-                            ProfileHeader(state.user, state.followCounts)
+                            ProfileHeader(
+                                user = state.user, 
+                                followCounts = state.followCounts,
+                                mutualCount = state.mutualFriends.size,
+                                onStatClick = { type, title -> onFollowClick(userId, title, type) },
+                                onEditClick = {
+                                    // 修正：传递所有 5 个参数给 MainActivity
+                                    onEditClick(state.user.nickname, state.user.handle, state.user.bio ?: "", state.user.avatar, state.user.bgImage)
+                                }
+                            )
                         }
 
                         item {
-                            Text(
-                                text = "我的动态",
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.padding(16.dp),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        itemsIndexed(state.moments) { index, moment ->
-                            PostCard(
-                                moment = moment,
-                                onLikeClick = { /* logic handled in Card if needed */ },
-                                onBookmarkClick = { /* logic handled in Card if needed */ }
-                            )
-                            
-                            if (index >= state.moments.size - 2) {
-                                LaunchedEffect(state.moments.size) {
-                                    viewModel.loadNextPage(userId)
+                            SecondaryTabRow(
+                                selectedTabIndex = selectedTab.ordinal,
+                                containerColor = Color.Transparent,
+                                divider = {}
+                            ) {
+                                MineTab.entries.forEach { tab ->
+                                    Tab(
+                                        selected = selectedTab == tab,
+                                        onClick = { viewModel.selectTab(tab) },
+                                        text = {
+                                            Text(
+                                                text = when(tab) {
+                                                    MineTab.MOMENTS -> "动态"
+                                                    MineTab.LIKED -> "赞过"
+                                                    MineTab.COLLECTED -> "收藏"
+                                                },
+                                                fontSize = 15.sp,
+                                                fontWeight = if (selectedTab == tab) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    )
                                 }
                             }
                         }
-                        
-                        if (state.moments.isEmpty()) {
+
+                        val currentList = when(selectedTab) {
+                            MineTab.MOMENTS -> state.moments
+                            MineTab.LIKED -> state.likedMoments
+                            MineTab.COLLECTED -> state.collectedMoments
+                        }
+
+                        if (currentList.isEmpty()) {
                             item {
                                 Box(
-                                    modifier = Modifier.fillMaxWidth().padding(64.dp),
+                                    modifier = Modifier.fillParentMaxHeight(0.5f).fillMaxWidth(),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("还没有发布过动态哦", color = Color.Gray)
+                                    Text("这里空空如也~", color = Color.Gray)
                                 }
+                            }
+                        } else {
+                            itemsIndexed(currentList) { index, moment ->
+                                PostCard(moment = moment)
                             }
                         }
                     }
@@ -119,7 +145,13 @@ fun MineScreen(
 }
 
 @Composable
-fun ProfileHeader(user: User, followCounts: FollowCounts) {
+fun ProfileHeader(
+    user: User, 
+    followCounts: FollowCounts,
+    mutualCount: Int,
+    onStatClick: (String, String) -> Unit,
+    onEditClick: () -> Unit
+) {
     val context = LocalContext.current
     
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -133,55 +165,41 @@ fun ProfileHeader(user: User, followCounts: FollowCounts) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f))
-                        )
-                    )
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f))))
             )
+            
+            SmallFloatingActionButton(
+                onClick = onEditClick,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 48.dp, end = 16.dp),
+                containerColor = Color.White.copy(alpha = 0.7f),
+                contentColor = Color.Black
+            ) {
+                Text("编辑", fontSize = 12.sp)
+            }
         }
 
         Box(modifier = Modifier.padding(horizontal = 16.dp)) {
             Column {
                 Spacer(modifier = Modifier.height(40.dp))
-                Text(
-                    text = user.nickname,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = user.handle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
-                )
+                Text(text = user.nickname, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(text = user.handle, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                 
-                // 新增：关注和粉丝数显示
-                Row(modifier = Modifier.padding(vertical = 8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = followCounts.followingCount.toString(), fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "关注", color = Color.Gray, fontSize = 14.sp)
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = followCounts.followersCount.toString(), fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "粉丝", color = Color.Gray, fontSize = 14.sp)
-                    }
+                Row(modifier = Modifier.padding(vertical = 12.dp)) {
+                    StatItem(count = followCounts.followingCount, label = "关注") { onStatClick("following", "我的关注") }
+                    Spacer(modifier = Modifier.width(20.dp))
+                    StatItem(count = followCounts.followersCount, label = "粉丝") { onStatClick("followers", "我的粉丝") }
+                    Spacer(modifier = Modifier.width(20.dp))
+                    StatItem(count = mutualCount, label = "好友") { onStatClick("mutual", "互关好友") }
                 }
 
-                Text(
-                    text = user.bio ?: "这个用户很懒，什么都没写",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Text(text = user.bio ?: "这个用户很懒，什么都没写", style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
             Surface(
-                modifier = Modifier
-                    .offset(y = (-50).dp)
-                    .size(100.dp)
-                    .border(4.dp, Color.White, CircleShape),
+                modifier = Modifier.offset(y = (-50).dp).size(90.dp).border(3.dp, Color.White, CircleShape),
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primaryContainer
             ) {
@@ -196,6 +214,18 @@ fun ProfileHeader(user: User, followCounts: FollowCounts) {
                 )
             }
         }
-        HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
+        HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.3f))
+    }
+}
+
+@Composable
+fun StatItem(count: Int, label: String, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Text(text = count.toString(), fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(text = label, color = Color.Gray, fontSize = 14.sp)
     }
 }

@@ -25,16 +25,14 @@ class ChatDetailViewModel : ViewModel() {
     private val _isSending = MutableStateFlow(false)
     val isSending = _isSending.asStateFlow()
 
+    private val _myAvatar = MutableStateFlow<String?>(null)
+    val myAvatar = _myAvatar.asStateFlow()
+
     init {
-        // --- 核心：启动监听 WebSocket 广播 ---
         viewModelScope.launch {
             SocketManager.messageFlow.collect { newMessage ->
                 val currentState = _uiState.value
                 if (currentState is ChatDetailUiState.Success) {
-                    // 判断这条消息是不是当前对话的人发的 (或者是你自己发的)
-                    // 注意：如果是你自己发的，已经在 sendMessage 里本地添加了，这里可以加判重
-                    val isFromOther = newMessage.senderId != currentState.messages.firstOrNull()?.senderId
-                    // 这里简化逻辑：只要属于该会话的消息且不重复，就添加
                     if (newMessage.id !in currentState.messages.map { it.id }) {
                         _uiState.value = currentState.copy(
                             messages = currentState.messages + newMessage
@@ -47,6 +45,10 @@ class ChatDetailViewModel : ViewModel() {
 
     fun loadHistory(userId: String, otherId: String) {
         viewModelScope.launch {
+            // 加载自己的头像
+            val user = repository.getUserProfile(userId)
+            _myAvatar.value = user?.avatar
+
             _uiState.value = ChatDetailUiState.Loading
             try {
                 val history = repository.getChatHistory(userId, otherId)
@@ -67,7 +69,6 @@ class ChatDetailViewModel : ViewModel() {
                 if (newMessage != null) {
                     val currentState = _uiState.value
                     if (currentState is ChatDetailUiState.Success) {
-                        // 只有 ID 不在列表里才添加（防止 Socket 重复推送自己发的消息）
                         if (newMessage.id !in currentState.messages.map { it.id }) {
                             _uiState.value = currentState.copy(
                                 messages = currentState.messages + newMessage

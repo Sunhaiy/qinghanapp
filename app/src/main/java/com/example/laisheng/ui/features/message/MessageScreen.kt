@@ -34,7 +34,7 @@ fun MessageScreen(
     hazeState: HazeState,
     userId: String,
     paddingValues: PaddingValues,
-    onChatClick: (String, String) -> Unit,
+    onChatClick: (String, String, String?) -> Unit, // 修正：增加 avatarUrl 参数
     viewModel: MessageViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -81,10 +81,10 @@ fun MessageScreen(
                                 ChatItem(
                                     item = item,
                                     onClick = { 
-                                        // 核心修复：后端可能返回 other_user_id 或 user_id，确保不为空
                                         val targetId = item.userId
                                         if (!targetId.isNullOrEmpty()) {
-                                            onChatClick(targetId, item.nickname ?: "聊天")
+                                            // 关键点：将头像 URL 也传给导航
+                                            onChatClick(targetId, item.nickname ?: "聊天", item.avatar)
                                         }
                                     }
                                 )
@@ -109,7 +109,7 @@ fun ChatItem(
 ) {
     val context = LocalContext.current
     Surface(
-        onClick = onClick, // 使用 Surface 的 onClick 以获得更好的水波纹反馈
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         color = Color.Transparent
     ) {

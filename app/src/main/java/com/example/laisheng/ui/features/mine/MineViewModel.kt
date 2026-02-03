@@ -14,11 +14,18 @@ import kotlinx.coroutines.launch
 sealed class MineUiState {
     object Loading : MineUiState()
     data class Success(
-        val user: User, 
+        val user: User,
         val moments: List<Moment>,
-        val followCounts: FollowCounts
+        val likedMoments: List<Moment>,
+        val collectedMoments: List<Moment>,
+        val followCounts: FollowCounts,
+        val mutualFriends: List<User> // 关键修复：添加互关好友列表
     ) : MineUiState()
     data class Error(val message: String) : MineUiState()
+}
+
+enum class MineTab {
+    MOMENTS, LIKED, COLLECTED
 }
 
 class MineViewModel : ViewModel() {
@@ -30,48 +37,51 @@ class MineViewModel : ViewModel() {
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing = _isRefreshing.asStateFlow()
 
-    private var currentPage = 1
-    private var isEndReached = false
+    private val _selectedTab = MutableStateFlow(MineTab.MOMENTS)
+    val selectedTab = _selectedTab.asStateFlow()
+
+    private var currentUserId: String? = null
+
+    fun selectTab(tab: MineTab) {
+        _selectedTab.value = tab
+        currentUserId?.let { loadData(it, isRefresh = false) }
+    }
 
     fun loadData(userId: String, isRefresh: Boolean = true) {
+        currentUserId = userId
         viewModelScope.launch {
             if (isRefresh) {
                 _isRefreshing.value = true
-                currentPage = 1
-                isEndReached = false
             }
 
             try {
-                // 并行获取数据
+                // 并行获取基础数据
                 val user = repository.getUserProfile(userId)
-                val response = repository.getUserMoments(userId, page = currentPage, currentUserId = userId)
                 val followCounts = repository.getFollowCounts(userId) ?: FollowCounts(0, 0)
+                val mutualFriends = repository.getMutualFollowing(userId) // 获取互关好友
+                
+                // 根据当前 Tab 获取对应列表
+                val moments = repository.getUserMoments(userId, currentUserId = userId)?.data ?: emptyList()
+                val liked = repository.getUserLikedMoments(userId)
+                val collected = repository.getUserCollections(userId)
 
-                if (user != null && response != null) {
-                    val currentMoments = if (isRefresh) response.data else {
-                        val current = (_uiState.value as? MineUiState.Success)?.moments ?: emptyList()
-                        current + response.data
-                    }
-                    
-                    _uiState.value = MineUiState.Success(user, currentMoments, followCounts)
-                    
-                    if (response.data.size < response.limit) {
-                        isEndReached = true
-                    }
+                if (user != null) {
+                    _uiState.value = MineUiState.Success(
+                        user = user,
+                        moments = moments,
+                        likedMoments = liked,
+                        collectedMoments = collected,
+                        followCounts = followCounts,
+                        mutualFriends = mutualFriends
+                    )
                 } else {
-                    _uiState.value = MineUiState.Error("获取数据失败")
+                    _uiState.value = MineUiState.Error("获取资料失败")
                 }
             } catch (e: Exception) {
-                _uiState.value = MineUiState.Error(e.message ?: "未知错误")
+                _uiState.value = MineUiState.Error(e.message ?: "网络错误")
             } finally {
                 _isRefreshing.value = false
             }
         }
-    }
-
-    fun loadNextPage(userId: String) {
-        if (isEndReached || _uiState.value !is MineUiState.Success) return
-        currentPage++
-        loadData(userId, isRefresh = false)
     }
 }
