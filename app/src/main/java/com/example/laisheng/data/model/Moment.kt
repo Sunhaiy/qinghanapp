@@ -43,7 +43,6 @@ data class UploadResponse(
     val size: Int
 )
 
-// --- 关注相关模型 ---
 data class FollowCounts(
     @SerializedName("followers_count") val followersCount: Int,
     @SerializedName("following_count") val followingCount: Int
@@ -55,16 +54,21 @@ data class ChatMessage(
     @SerializedName("sender_id") val senderId: String,
     @SerializedName("receiver_id") val receiverId: String,
     val content: MessageContent,
-    @SerializedName("created_at") val createdAt: String
+    @SerializedName("created_at") val createdAt: String,
+    // 详情页可能需要的发送者信息
+    val nickname: String? = null,
+    val avatar: String? = null
 )
 
 data class MessageContent(
     val text: String?,
-    val type: String // text, image, voice
+    val type: String, // text, image, voice
+    val attachments: List<Attachment>? = emptyList() // 新增附件支持
 )
 
 data class ChatListItem(
-    @SerializedName("user_id") val userId: String,
+    // 对方的 ID
+    @SerializedName("user_id", alternate = ["id", "other_user_id", "contact_id"]) val userId: String?,
     val nickname: String?,
     val avatar: String?,
     val handle: String?,

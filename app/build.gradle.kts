@@ -70,6 +70,9 @@ dependencies {
     // 添加 SVG 支持
     implementation("io.coil-kt:coil-svg:2.7.0")
 
+    // Socket.io
+    implementation("io.socket:socket.io-client:2.1.0")
+
     implementation(libs.androidx.compose.foundation.layout)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

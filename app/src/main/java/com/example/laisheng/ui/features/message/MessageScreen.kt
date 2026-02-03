@@ -34,6 +34,7 @@ fun MessageScreen(
     hazeState: HazeState,
     userId: String,
     paddingValues: PaddingValues,
+    onChatClick: (String, String) -> Unit,
     viewModel: MessageViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -77,7 +78,16 @@ fun MessageScreen(
                             }
                         } else {
                             items(state.chatList) { item ->
-                                ChatItem(item)
+                                ChatItem(
+                                    item = item,
+                                    onClick = { 
+                                        // 核心修复：后端可能返回 other_user_id 或 user_id，确保不为空
+                                        val targetId = item.userId
+                                        if (!targetId.isNullOrEmpty()) {
+                                            onChatClick(targetId, item.nickname ?: "聊天")
+                                        }
+                                    }
+                                )
                             }
                         }
                     }
@@ -93,71 +103,76 @@ fun MessageScreen(
 }
 
 @Composable
-fun ChatItem(item: ChatListItem) {
+fun ChatItem(
+    item: ChatListItem,
+    onClick: () -> Unit
+) {
     val context = LocalContext.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { /* 跳转聊天详情 */ }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        onClick = onClick, // 使用 Surface 的 onClick 以获得更好的水波纹反馈
+        modifier = Modifier.fillMaxWidth(),
+        color = Color.Transparent
     ) {
-        Box(modifier = Modifier.size(50.dp)) {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(NetworkModule.formatUrl(item.avatar))
-                    .decoderFactory(SvgDecoder.Factory())
-                    .build(),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentScale = ContentScale.Crop
-            )
-            if (item.unreadCount > 0) {
-                Box(
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.size(50.dp)) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(NetworkModule.formatUrl(item.avatar))
+                        .decoderFactory(SvgDecoder.Factory())
+                        .build(),
+                    contentDescription = null,
                     modifier = Modifier
-                        .size(12.dp)
-                        .background(Color.Red, CircleShape)
-                        .align(Alignment.TopEnd)
-                        .border(2.dp, Color.White, CircleShape)
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentScale = ContentScale.Crop
+                )
+                if (item.unreadCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .background(Color.Red, CircleShape)
+                            .align(Alignment.TopEnd)
+                            .border(2.dp, Color.White, CircleShape)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = item.nickname ?: "未知用户",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = formatChatTime(item.lastTime),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = item.lastMessage ?: "",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-        }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = item.nickname ?: "未知用户",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = formatChatTime(item.lastTime),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = item.lastMessage ?: "",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }
 
-// 核心修复：参数改为可空 String? 并增加判空
 fun formatChatTime(isoString: String?): String {
     if (isoString.isNullOrEmpty()) return ""
     return try {

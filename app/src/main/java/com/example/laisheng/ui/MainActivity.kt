@@ -1,5 +1,6 @@
 package com.example.laisheng.ui
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,6 +26,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,11 +48,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.laisheng.data.remote.SocketManager
 import com.example.laisheng.navigation.Route
 import com.example.laisheng.ui.features.detail.MomentDetailScreen
 import com.example.laisheng.ui.features.explore.ExploreScreen
 import com.example.laisheng.ui.features.home.HomeScreen
 import com.example.laisheng.ui.features.login.LoginScreen
+import com.example.laisheng.ui.features.message.ChatDetailScreen
 import com.example.laisheng.ui.features.message.MessageScreen
 import com.example.laisheng.ui.features.mine.MineScreen
 import com.example.laisheng.ui.features.post.PostScreen
@@ -79,6 +84,19 @@ fun Laisheng() {
     val userPrefs = remember { UserPrefs(context) }
     
     var loggedInUserId by remember { mutableStateOf(userPrefs.getUserId()) }
+
+    // --- WebSocket 核心连接逻辑 ---
+    LaunchedEffect(loggedInUserId) {
+        loggedInUserId?.let { id ->
+            SocketManager.connect(id)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            SocketManager.disconnect()
+        }
+    }
 
     if (loggedInUserId == null) {
         LoginScreen(onLoginSuccess = { userId ->
@@ -113,21 +131,15 @@ fun Laisheng() {
 
         Scaffold(
             topBar = {
-                if (currentRoute != "moment_detail/{momentId}") {
-                    TopBar(
-                        hazeState = hazeState,
-                        currentRoute = currentRoute
-                    )
+                val isFullScreen = currentRoute?.startsWith("moment_detail") == true || currentRoute?.startsWith("chat") == true
+                if (!isFullScreen) {
+                    TopBar(hazeState = hazeState, currentRoute = currentRoute)
                 }
             },
             bottomBar = {
-                if (currentRoute != "moment_detail/{momentId}") {
-                    BottomNavigation(
-                        hazeState = hazeState,
-                        navController = navController,
-                        items = items,
-                        onPostClick = { showPostDialog = true }
-                    )
+                val isFullScreen = currentRoute?.startsWith("moment_detail") == true || currentRoute?.startsWith("chat") == true
+                if (!isFullScreen) {
+                    BottomNavigation(hazeState = hazeState, navController = navController, items = items, onPostClick = { showPostDialog = true })
                 }
             }
         ) { paddingValues ->
@@ -155,7 +167,11 @@ fun Laisheng() {
                         MessageScreen(
                             hazeState = hazeState,
                             userId = userId,
-                            paddingValues = paddingValues
+                            paddingValues = paddingValues,
+                            onChatClick = { otherId, nickname ->
+                                val encodedNickname = Uri.encode(nickname)
+                                navController.navigate("chat/$otherId/$encodedNickname")
+                            }
                         )
                     }
                     composable(Route.Mine.route) {
@@ -177,6 +193,23 @@ fun Laisheng() {
                             onBack = { navController.popBackStack() },
                             sharedTransitionScope = this@SharedTransitionLayout,
                             animatedVisibilityScope = this@composable
+                        )
+                    }
+
+                    composable(
+                        route = "chat/{otherId}/{nickname}",
+                        arguments = listOf(
+                            navArgument("otherId") { type = NavType.StringType },
+                            navArgument("nickname") { type = NavType.StringType }
+                        )
+                    ) { backStackEntry ->
+                        val otherId = backStackEntry.arguments?.getString("otherId") ?: ""
+                        val nickname = Uri.decode(backStackEntry.arguments?.getString("nickname") ?: "聊天")
+                        ChatDetailScreen(
+                            userId = userId,
+                            otherId = otherId,
+                            otherNickname = nickname,
+                            onBack = { navController.popBackStack() }
                         )
                     }
                 }

@@ -104,7 +104,7 @@ class MomentRepository(private val apiService: ApiService) {
         }
     }
 
-    // 11. 获取关注/粉丝数 (新增封装)
+    // 11. 获取关注/粉丝数
     suspend fun getFollowCounts(userId: String): FollowCounts? {
         return try {
             apiService.getFollowCounts(userId)
@@ -114,13 +114,38 @@ class MomentRepository(private val apiService: ApiService) {
         }
     }
 
-    // 12. 获取聊天列表 (新增封装)
+    // 12. 获取聊天列表
     suspend fun getChatList(userId: String): List<ChatListItem> {
         return try {
             apiService.getChatList(userId)
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
+        }
+    }
+
+    // 13. 获取聊天历史记录
+    suspend fun getChatHistory(userId1: String, userId2: String, page: Int = 1): List<ChatMessage> {
+        return try {
+            apiService.getChatHistory(userId1, userId2, page)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    // 14. 发送私信
+    suspend fun sendMessage(senderId: String, receiverId: String, text: String): ChatMessage? {
+        return try {
+            val request = SendMessageRequest(
+                senderId = senderId,
+                receiverId = receiverId,
+                content = MessageContent(text = text, type = "text")
+            )
+            apiService.sendMessage(request)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 }
