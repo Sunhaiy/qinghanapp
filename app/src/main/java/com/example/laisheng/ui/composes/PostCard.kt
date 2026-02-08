@@ -2,6 +2,8 @@ package com.example.laisheng.ui.composes
 
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,11 +11,15 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -64,7 +70,6 @@ fun PostCard(
             .clickable(onClick = onCardClick)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        // 用户信息栏
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -112,23 +117,23 @@ fun PostCard(
                     }
                 }
             }
-            IconButton(onClick = onMoreClick) {
-                Icon(Lucide.Ellipsis, "更多", tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(20.dp))
+            IconButton(onClick = onMoreClick, modifier = Modifier.size(32.dp)) {
+                Icon(Lucide.Ellipsis, "更多", tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(16.dp))
             }
         }
 
-        // --- 文字内容 ---
         if (hasText) {
             Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = moment.content.text!!,
-                style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp, letterSpacing = 0.5.sp),
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.fillMaxWidth()
-            )
+            moment.content.text?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp, letterSpacing = 0.5.sp),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
 
-        // --- 媒体内容 ---
         if (hasAttachments) {
             Spacer(modifier = Modifier.height(12.dp))
             MediaGallery(processedAttachments)
@@ -136,7 +141,6 @@ fun PostCard(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 底部工具栏
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -149,28 +153,29 @@ fun PostCard(
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PostActionItem(
-                    icon = Lucide.Heart,
+                    icon = if (moment.isLiked) Icons.Filled.Favorite else Lucide.Heart,
                     count = moment.likesCount,
                     contentDescription = "点赞",
-                    tint = if (moment.isLiked) Color(0xFFE91E63) else MaterialTheme.colorScheme.outline,
+                    isActive = moment.isLiked,
+                    activeColor = Color(0xFFE91E63),
                     onClick = onLikeClick
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 PostActionItem(
                     icon = Lucide.MessageCircle,
                     count = moment.commentsCount,
                     contentDescription = "评论",
                     onClick = onCommentClick
                 )
-                Spacer(modifier = Modifier.width(16.dp))
-                IconButton(onClick = onBookmarkClick, modifier = Modifier.size(24.dp)) {
-                    Icon(
-                        imageVector = Lucide.Star,
-                        contentDescription = "收藏",
-                        tint = if (moment.isCollected) Color(0xFFFFB300) else MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                Spacer(modifier = Modifier.width(8.dp))
+                PostActionItem(
+                    icon = if (moment.isCollected) Icons.Filled.Star else Lucide.Star,
+                    contentDescription = "收藏",
+                    isActive = moment.isCollected,
+                    activeColor = Color(0xFFFFC107),
+                    onClick = onBookmarkClick,
+                    showCount = false
+                )
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -295,29 +300,41 @@ fun VoicePlayerTag(url: String, duration: Int) {
 @Composable
 private fun PostActionItem(
     icon: ImageVector,
-    count: Int,
     contentDescription: String,
-    tint: Color = MaterialTheme.colorScheme.outline,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    count: Int = 0,
+    isActive: Boolean = false,
+    activeColor: Color = MaterialTheme.colorScheme.primary,
+    showCount: Boolean = true
 ) {
+    val tint by animateColorAsState(if (isActive) activeColor else MaterialTheme.colorScheme.outline)
+    val scale by animateFloatAsState(
+        targetValue = if (isActive) 1.1f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+    )
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
+        modifier = modifier
             .clip(CircleShape)
             .clickable(onClick = onClick)
-            .padding(4.dp)
+            .padding(horizontal = 7.dp, vertical = 5.dp)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = tint,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(18.dp).scale(scale)
         )
-        if (count > 0) {
+        if (showCount && count > 0) {
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = count.toString(),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = 12.sp,
+                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
+                ),
                 color = tint
             )
         }
@@ -325,5 +342,9 @@ private fun PostActionItem(
 }
 
 private fun formatTime(isoString: String): String {
-    return try { if (isoString.length >= 10) isoString.take(10) else isoString } catch (e: Exception) { "刚刚" }
+    return try {
+        if (isoString.length >= 10) isoString.take(10) else isoString
+    } catch (e: Exception) {
+        "刚刚"
+    }
 }

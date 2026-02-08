@@ -3,7 +3,6 @@ package com.example.laisheng.navigation
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.composables.icons.lucide.*
 
-// 定义路由路径和底部栏的配置
 sealed class Route(
     val route: String,
     val title: String,

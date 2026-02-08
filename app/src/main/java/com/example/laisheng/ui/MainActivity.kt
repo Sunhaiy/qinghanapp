@@ -10,30 +10,20 @@ import androidx.compose.animation.core.*
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -96,13 +86,6 @@ fun Laisheng() {
         val navController = rememberNavController()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
-        var showPostDialog by remember { mutableStateOf(false) }
-
-        if (showPostDialog) {
-            Dialog(onDismissRequest = { showPostDialog = false }) {
-                PostScreen(userId = userId, onCancel = { showPostDialog = false }, onPostSuccess = { showPostDialog = false })
-            }
-        }
 
         val items = listOf(Route.Home, Route.Explore, Route.Post, Route.Message, Route.Mine)
 
@@ -111,15 +94,17 @@ fun Laisheng() {
                 val isFullScreen = currentRoute?.startsWith("moment_detail") == true || 
                                  currentRoute?.startsWith("chat") == true ||
                                  currentRoute?.startsWith("follows") == true ||
-                                 currentRoute?.startsWith("edit_profile") == true
+                                 currentRoute?.startsWith("edit_profile") == true ||
+                                 currentRoute == Route.Post.route
                 if (!isFullScreen) TopBar(hazeState, currentRoute)
             },
             bottomBar = {
                 val isFullScreen = currentRoute?.startsWith("moment_detail") == true || 
                                  currentRoute?.startsWith("chat") == true ||
                                  currentRoute?.startsWith("follows") == true ||
-                                 currentRoute?.startsWith("edit_profile") == true
-                if (!isFullScreen) BottomNavigation(hazeState, navController, items) { showPostDialog = true }
+                                 currentRoute?.startsWith("edit_profile") == true ||
+                                 currentRoute == Route.Post.route
+                if (!isFullScreen) BottomNavigation(hazeState, navController, items)
             }
         ) { paddingValues ->
             SharedTransitionLayout {
@@ -127,6 +112,11 @@ fun Laisheng() {
                     composable(Route.Home.route) { HomeScreen(hazeState, paddingValues) }
                     composable(Route.Explore.route) {
                         ExploreScreen(hazeState, paddingValues, userId, { id -> navController.navigate("moment_detail/$id") }, this@SharedTransitionLayout, this@composable)
+                    }
+                    composable(Route.Post.route) {
+                        PostScreen(userId = userId, onCancel = { navController.popBackStack() }, onPostSuccess = { 
+                            navController.popBackStack()
+                        })
                     }
                     composable(Route.Message.route) {
                         MessageScreen(hazeState, userId, paddingValues, { id, name, avatar ->
@@ -198,116 +188,68 @@ fun Laisheng() {
 }
 
 @Composable
-fun BottomNavigation(hazeState: HazeState, navController: NavController, items: List<Route>, onPostClick: () -> Unit) {
+fun BottomNavigation(hazeState: HazeState, navController: NavController, items: List<Route>) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val primaryColor = MaterialTheme.colorScheme.primary
-    val baseColor = Color(0xFF444444)
+    val baseColor = Color(0xFF666666)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin())
-            .background(Color.White.copy(alpha = 0.8f))
+            .background(Color.White.copy(alpha = 0.85f))
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
     ) {
         Column {
-            HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
+            HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.3f))
             Row(
-                modifier = Modifier.fillMaxWidth().height(60.dp),
+                modifier = Modifier.fillMaxWidth().height(64.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 items.forEach { screen ->
                     val isSelected = currentRoute == screen.route
                     val isPost = screen is Route.Post
-                    val interactionSource = remember { MutableInteractionSource() }
-                    val isPressed by interactionSource.collectIsPressedAsState()
-
-                    // 利落缩放动画
-                    val animatedScale by animateFloatAsState(
-                        targetValue = if (isSelected) 1.12f else 1f,
-                        animationSpec = if (isSelected) keyframes {
-                            durationMillis = 150
-                            1.3f at 50
-                            1.12f at 150
-                        } else tween(100)
+                    
+                    val iconScale by animateFloatAsState(
+                        targetValue = if (isSelected) 1.15f else 1f,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
                     )
-
-                    // 核心：对角线填充进度
-                    val fillFraction by animateFloatAsState(
-                        targetValue = if (isSelected) 1f else 0f,
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    val iconColor by animateColorAsState(
+                        targetValue = if (isSelected) primaryColor else baseColor,
+                        animationSpec = tween(150)
                     )
 
                     Box(
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier.weight(1f).clickable(interactionSource = interactionSource, indication = null) {
-                            if (isPost) onPostClick() else navController.navigate(screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true; restoreState = true
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() }, 
+                                indication = null
+                            ) {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true; restoreState = true
+                                }
                             }
-                        }
                     ) {
                         if (isPost) {
-                            val postScale by animateFloatAsState(if (isPressed) 0.9f else 1f)
                             Surface(
-                                modifier = Modifier.size(42.dp).scale(postScale).border(0.5.dp, Color.White.copy(alpha = 0.5f), CircleShape),
-                                shape = CircleShape, color = primaryColor, shadowElevation = 10.dp
+                                modifier = Modifier.size(40.dp),
+                                shape = CircleShape, color = primaryColor, shadowElevation = 4.dp
                             ) {
-                                Icon(imageVector = Lucide.Plus, contentDescription = null, tint = Color.White, modifier = Modifier.padding(10.dp))
+                                Icon(Lucide.Plus, null, tint = Color.White, modifier = Modifier.padding(8.dp))
                             }
                         } else {
-                            val (unselectedIcon, selectedIcon) = when(screen) {
-                                Route.Home -> Lucide.House to Lucide.House
-                                Route.Explore -> Lucide.Compass to Lucide.Compass
-                                Route.Message -> Lucide.MessageCircle to Lucide.MessageCircle
-                                Route.Mine -> Lucide.User to Lucide.User
-                                else -> Lucide.Circle to Lucide.Circle
-                            }
-
-                            // 这里的 Lucide 图标通常是线框的。为了实现“填充”效果，
-                            // 我们在选中状态下通过背景色和 BlendMode 来模拟填充感。
-                            // 但用户想要真正的“Filled”图标。Lucide 库本身大部分是线框风格。
-                            // 如果要实现真正的填充动画，我们需要在底层放一个 Outlined 图标，
-                            // 在顶层放一个被裁剪的 Filled 图标。
-                            
-                            Box(contentAlignment = Alignment.Center) {
-                                // 底层线框图标
-                                Icon(
-                                    imageVector = screen.unselectedIcon,
-                                    contentDescription = null,
-                                    tint = baseColor,
-                                    modifier = Modifier.size(24.dp).scale(animatedScale)
-                                )
-                                
-                                // 顶层填充图标（带动画裁剪）
-                                Icon(
-                                    imageVector = screen.selectedIcon,
-                                    contentDescription = null,
-                                    tint = primaryColor,
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .scale(animatedScale)
-                                        .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                                        .drawWithCache {
-                                            onDrawWithContent {
-                                                if (fillFraction > 0f) {
-                                                    // 蒙版式对角线填充裁剪
-                                                    val brush = Brush.linearGradient(
-                                                        0.0f to Color.Black,
-                                                        fillFraction to Color.Black,
-                                                        fillFraction + 0.01f to Color.Transparent,
-                                                        start = Offset(0f, size.height),
-                                                        end = Offset(size.width, 0f)
-                                                    )
-                                                    drawContent()
-                                                    drawRect(brush, blendMode = BlendMode.DstIn)
-                                                }
-                                            }
-                                        }
-                                )
-                            }
+                            Icon(
+                                imageVector = if (isSelected) screen.selectedIcon else screen.unselectedIcon,
+                                contentDescription = null,
+                                tint = iconColor,
+                                modifier = Modifier.size(24.dp).scale(iconScale)
+                            )
                         }
                     }
                 }
