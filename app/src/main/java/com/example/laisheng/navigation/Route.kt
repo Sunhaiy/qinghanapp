@@ -1,17 +1,7 @@
 package com.example.laisheng.navigation
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.outlined.AddCircle
-import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Place
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.composables.icons.lucide.*
 
 // 定义路由路径和底部栏的配置
 sealed class Route(
@@ -23,31 +13,31 @@ sealed class Route(
     object Home : Route(
         route = "home",
         title = "首页",
-        selectedIcon = Icons.Filled.Home,
-        unselectedIcon = Icons.Outlined.Home
+        selectedIcon = Lucide.House,
+        unselectedIcon = Lucide.House
     )
     object Explore : Route(
         route = "explore",
         title = "探索",
-        selectedIcon = Icons.Filled.Place,
-        unselectedIcon = Icons.Outlined.Place
+        selectedIcon = Lucide.Compass,
+        unselectedIcon = Lucide.Compass
     )
     object Post : Route(
         route = "post",
         title = "发布",
-        selectedIcon = Icons.Filled.AddCircle,
-        unselectedIcon = Icons.Outlined.AddCircle
+        selectedIcon = Lucide.Plus,
+        unselectedIcon = Lucide.Plus
     )
     object Message : Route(
         route = "message",
         title = "消息",
-        selectedIcon = Icons.Filled.Email,
-        unselectedIcon = Icons.Outlined.Email
+        selectedIcon = Lucide.MessageCircle,
+        unselectedIcon = Lucide.MessageCircle
     )
     object Mine : Route(
         route = "mine",
         title = "我的",
-        selectedIcon = Icons.Filled.Person,
-        unselectedIcon = Icons.Outlined.Person
+        selectedIcon = Lucide.User,
+        unselectedIcon = Lucide.User
     )
 }

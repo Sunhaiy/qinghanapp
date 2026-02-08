@@ -3,22 +3,12 @@ package com.example.laisheng.ui.composes
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.outlined.Bookmark
-import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
+import com.composables.icons.lucide.*
 import com.example.laisheng.data.NetworkModule
 import com.example.laisheng.data.model.Attachment
 import com.example.laisheng.data.model.Moment
@@ -122,13 +113,11 @@ fun PostCard(
                 }
             }
             IconButton(onClick = onMoreClick) {
-                Icon(Icons.Default.MoreHoriz, "更多", tint = MaterialTheme.colorScheme.outline)
+                Icon(Lucide.Ellipsis, "更多", tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(20.dp))
             }
         }
 
-        // --- 核心优化部分：按需控制间距 ---
-        
-        // 1. 如果有文字，显示文字和文字上方间距
+        // --- 文字内容 ---
         if (hasText) {
             Spacer(modifier = Modifier.height(12.dp))
             Text(
@@ -139,7 +128,7 @@ fun PostCard(
             )
         }
 
-        // 2. 如果有附件，显示附件和附件上方间距
+        // --- 媒体内容 ---
         if (hasAttachments) {
             Spacer(modifier = Modifier.height(12.dp))
             MediaGallery(processedAttachments)
@@ -160,15 +149,15 @@ fun PostCard(
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PostActionItem(
-                    icon = if (moment.isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    icon = Lucide.Heart,
                     count = moment.likesCount,
                     contentDescription = "点赞",
-                    tint = if (moment.isLiked) Color.Red else MaterialTheme.colorScheme.outline,
+                    tint = if (moment.isLiked) Color(0xFFE91E63) else MaterialTheme.colorScheme.outline,
                     onClick = onLikeClick
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 PostActionItem(
-                    icon = Icons.Outlined.ChatBubbleOutline,
+                    icon = Lucide.MessageCircle,
                     count = moment.commentsCount,
                     contentDescription = "评论",
                     onClick = onCommentClick
@@ -176,10 +165,10 @@ fun PostCard(
                 Spacer(modifier = Modifier.width(16.dp))
                 IconButton(onClick = onBookmarkClick, modifier = Modifier.size(24.dp)) {
                     Icon(
-                        imageVector = if (moment.isCollected) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
+                        imageVector = Lucide.Star,
                         contentDescription = "收藏",
                         tint = if (moment.isCollected) Color(0xFFFFB300) else MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -282,7 +271,7 @@ fun VoicePlayerTag(url: String, duration: Int) {
             modifier = Modifier.padding(horizontal = 12.dp)
         ) {
             Icon(
-                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                imageVector = if (isPlaying) Lucide.Pause else Lucide.Play,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp)
             )
@@ -290,7 +279,7 @@ fun VoicePlayerTag(url: String, duration: Int) {
             Text("${duration}\"", style = MaterialTheme.typography.labelLarge)
             Spacer(modifier = Modifier.weight(1f))
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
-                repeat(5) { index ->
+                repeat(5) {
                     Box(
                         Modifier
                             .width(2.dp)
@@ -336,5 +325,5 @@ private fun PostActionItem(
 }
 
 private fun formatTime(isoString: String): String {
-    return try { if (isoString.length >= 10) isoString.substring(0, 10) else isoString } catch (e: Exception) { "刚刚" }
+    return try { if (isoString.length >= 10) isoString.take(10) else isoString } catch (e: Exception) { "刚刚" }
 }

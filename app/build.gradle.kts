@@ -73,6 +73,9 @@ dependencies {
     // Socket.io
     implementation("io.socket:socket.io-client:2.1.0")
 
+    // Lucide Icons
+    implementation("com.composables:icons-lucide:1.0.0")
+
     implementation(libs.androidx.compose.foundation.layout)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
