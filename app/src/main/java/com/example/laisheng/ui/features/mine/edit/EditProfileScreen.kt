@@ -37,7 +37,7 @@ import com.example.laisheng.data.NetworkModule
 @Composable
 fun EditProfileScreen(
     userId: String,
-    handle: String, // 新增：接收 handle 参数
+    handle: String,
     initialNickname: String,
     initialBio: String,
     initialAvatar: String?,
@@ -85,7 +85,8 @@ fun EditProfileScreen(
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     } else {
                         IconButton(onClick = {
-                            viewModel.updateProfile(userId, nickname, bio, avatarUri, bgUri, context)
+                            // 修正：将 initialAvatar 和 initialBgImage 传进去作为兜底，防止被清空
+                            viewModel.updateProfile(userId, nickname, bio, avatarUri, bgUri, initialAvatar, initialBgImage, context)
                         }) {
                             Icon(Icons.Default.Check, contentDescription = "保存", tint = MaterialTheme.colorScheme.primary)
                         }
@@ -100,7 +101,7 @@ fun EditProfileScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // 背景图编辑
+            // 背景图编辑区
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -114,22 +115,13 @@ fun EditProfileScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f)),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color.White)
                 }
             }
 
-            // 头像编辑
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .offset(y = (-40).dp)
-            ) {
+            // 头像编辑区
+            Box(modifier = Modifier.padding(horizontal = 16.dp).offset(y = (-40).dp)) {
                 Surface(
                     modifier = Modifier
                         .size(80.dp)
@@ -148,63 +140,23 @@ fun EditProfileScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.3f)),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
             }
 
-            // 表单
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                // Handle 展示 (只读)
-                Text(
-                    text = "数字身份",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = handle,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Gray,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-                
+                Text(text = "数字身份", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Text(text = handle, style = MaterialTheme.typography.bodyLarge, color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp))
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp, color = Color.LightGray)
-
                 Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = nickname,
-                    onValueChange = { nickname = it },
-                    label = { Text("昵称") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
-                )
-
+                OutlinedTextField(value = nickname, onValueChange = { nickname = it }, label = { Text("昵称") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp))
                 Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = bio,
-                    onValueChange = { bio = it },
-                    label = { Text("个人简介") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 3,
-                    shape = RoundedCornerShape(12.dp)
-                )
-
+                OutlinedTextField(value = bio, onValueChange = { bio = it }, label = { Text("个人简介") }, modifier = Modifier.fillMaxWidth(), minLines = 3, shape = RoundedCornerShape(12.dp))
                 if (uiState is EditUiState.Error) {
-                    Text(
-                        text = (uiState as EditUiState.Error).message,
-                        color = Color.Red,
-                        modifier = Modifier.padding(top = 16.dp)
-                    )
+                    Text(text = (uiState as EditUiState.Error).message, color = Color.Red, modifier = Modifier.padding(top = 16.dp))
                 }
             }
         }

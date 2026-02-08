@@ -5,7 +5,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object NetworkModule {
-    // 你的电脑局域网 IP
+    // 局域网 IP
     const val BASE_URL = "http://192.168.1.2:3000/"
 
     private val retrofit = Retrofit.Builder()
@@ -16,15 +16,32 @@ object NetworkModule {
     val apiService: ApiService = retrofit.create(ApiService::class.java)
 
     /**
-     * 自动处理 URL 转换：
-     * 将后端返回的 localhost 或 127.0.0.1 替换为当前配置的局域网 IP。
-     * 这样无论是在模拟器 (10.0.2.2) 还是真机 (192.168.x.x) 都能正常显示图片和播放音频。
+     * 增强版 URL 格式化：
+     * 1. 自动补全相对路径 (如 uploads/xxx.jpg -> http://192.168.1.2:3000/uploads/xxx.jpg)
+     * 2. 自动替换 localhost 为局域网 IP
+     * 3. 保持外部 HTTPS 链接不变
      */
     fun formatUrl(url: String?): String? {
-        if (url == null) return null
-        // 提取 BASE_URL 中的 IP 部分 (例如 http://192.168.1.2)
-        val hostPart = BASE_URL.substringBeforeLast(":3000/")
-        return url.replace("http://localhost", hostPart)
-                  .replace("http://127.0.0.1", hostPart)
+        if (url == null || url.isBlank()) return null
+        
+        // 如果是完整的外部链接且不含 localhost，直接返回
+        if (url.startsWith("http") && !url.contains("localhost") && !url.contains("127.0.0.1")) {
+            return url
+        }
+
+        // 如果是 localhost 或相对路径，统一处理
+        val cleanBase = BASE_URL.removeSuffix("/")
+        val hostPart = cleanBase // 比如 http://192.168.1.2:3000
+
+        var result = if (url.startsWith("http")) {
+            url.replace("http://localhost:3000", hostPart)
+               .replace("https://localhost:3000", hostPart)
+               .replace("http://127.0.0.1:3000", hostPart)
+        } else {
+            // 处理相对路径
+            val cleanPath = if (url.startsWith("/")) url else "/$url"
+            hostPart + cleanPath
+        }
+        return result
     }
 }

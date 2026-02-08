@@ -34,6 +34,8 @@ class EditProfileViewModel : ViewModel() {
         bio: String,
         newAvatarUri: Uri?,
         newBgUri: Uri?,
+        currentAvatar: String?, // 传入当前头像作为兜底
+        currentBg: String?,     // 传入当前背景作为兜底
         context: Context
     ) {
         viewModelScope.launch {
@@ -42,8 +44,12 @@ class EditProfileViewModel : ViewModel() {
                 val updates = mutableMapOf<String, String?>()
                 updates["nickname"] = nickname
                 updates["bio"] = bio
+                
+                // 默认使用当前已有的 URL，防止被后端清空
+                updates["avatar"] = currentAvatar
+                updates["bg_image"] = currentBg
 
-                // 1. 如果选了新头像，先上传
+                // 1. 如果选了新头像，上传并覆盖
                 newAvatarUri?.let { uri ->
                     val file = uriToFile(context, uri, "avatar")
                     file?.let {
@@ -53,7 +59,7 @@ class EditProfileViewModel : ViewModel() {
                     }
                 }
 
-                // 2. 如果选了新背景，再上传
+                // 2. 如果选了新背景，上传并覆盖
                 newBgUri?.let { uri ->
                     val file = uriToFile(context, uri, "bg")
                     file?.let {
@@ -63,7 +69,7 @@ class EditProfileViewModel : ViewModel() {
                     }
                 }
 
-                // 3. 提交更新
+                // 3. 提交完整更新
                 repository.updateProfile(userId, updates)
                 _uiState.value = EditUiState.Success
             } catch (e: Exception) {

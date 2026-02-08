@@ -64,6 +64,7 @@ fun ExploreScreen(
                             onLikeClick = {
                                 viewModel.onLikeClick(userId, moment.id)
                             },
+                            onCommentClick = { onMomentClick(moment.id) }, // 点击评论按钮也跳转到详情页
                             onBookmarkClick = {
                                 viewModel.onBookmarkClick(userId, moment.id)
                             }

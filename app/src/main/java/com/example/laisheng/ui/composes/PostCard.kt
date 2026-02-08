@@ -3,6 +3,7 @@ package com.example.laisheng.ui.composes
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -51,7 +52,6 @@ fun PostCard(
     val nickname = moment.nickname ?: "未知用户"
     val handle = moment.handle ?: ""
     
-    // 自动适配真机或模拟器的 IP 地址
     val avatarUrl = remember(moment.avatar) { 
         NetworkModule.formatUrl(moment.avatar) 
     }
@@ -63,6 +63,9 @@ fun PostCard(
             it.copy(url = NetworkModule.formatUrl(it.url) ?: it.url)
         } ?: emptyList()
     }
+
+    val hasText = !moment.content.text.isNullOrBlank()
+    val hasAttachments = processedAttachments.isNotEmpty()
 
     Column(
         modifier = modifier
@@ -78,7 +81,6 @@ fun PostCard(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(44.dp)) {
-                    // 核心修复：增加 SvgDecoder 支待
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(avatarUrl)
@@ -124,24 +126,28 @@ fun PostCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        moment.content.text?.let {
+        // --- 核心优化部分：按需控制间距 ---
+        
+        // 1. 如果有文字，显示文字和文字上方间距
+        if (hasText) {
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = it,
+                text = moment.content.text!!,
                 style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp, letterSpacing = 0.5.sp),
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.fillMaxWidth()
             )
         }
 
-        if (processedAttachments.isNotEmpty()) {
+        // 2. 如果有附件，显示附件和附件上方间距
+        if (hasAttachments) {
             Spacer(modifier = Modifier.height(12.dp))
             MediaGallery(processedAttachments)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // 底部工具栏
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -192,7 +198,6 @@ fun MediaGallery(attachments: List<Attachment>) {
         items(attachments) { attachment ->
             when (attachment.type) {
                 "image" -> {
-                    // 图片也加上 SVG 支待，万一有附件也是 SVG
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(attachment.url)

@@ -39,7 +39,8 @@ fun MineScreen(
     userId: String,
     paddingValues: PaddingValues,
     onFollowClick: (String, String, String) -> Unit,
-    onEditClick: (String, String, String, String?, String?) -> Unit, // 修正：改为 5 个参数，加入 handle
+    onEditClick: (String, String, String, String?, String?) -> Unit,
+    onMomentClick: (String) -> Unit, // 新增：点击动态的回调
     viewModel: MineViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -80,7 +81,6 @@ fun MineScreen(
                                 mutualCount = state.mutualFriends.size,
                                 onStatClick = { type, title -> onFollowClick(userId, title, type) },
                                 onEditClick = {
-                                    // 修正：传递所有 5 个参数给 MainActivity
                                     onEditClick(state.user.nickname, state.user.handle, state.user.bio ?: "", state.user.avatar, state.user.bgImage)
                                 }
                             )
@@ -129,7 +129,11 @@ fun MineScreen(
                             }
                         } else {
                             itemsIndexed(currentList) { index, moment ->
-                                PostCard(moment = moment)
+                                PostCard(
+                                    moment = moment,
+                                    onCardClick = { onMomentClick(moment.id) }, // 接通点击跳转
+                                    onCommentClick = { onMomentClick(moment.id) } // 点击评论按钮也跳转
+                                )
                             }
                         }
                     }
