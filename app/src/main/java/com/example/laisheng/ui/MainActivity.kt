@@ -2,6 +2,7 @@ package com.example.laisheng.ui
 
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -95,7 +96,8 @@ fun Laisheng() {
                                  currentRoute?.startsWith("chat") == true ||
                                  currentRoute?.startsWith("follows") == true ||
                                  currentRoute?.startsWith("edit_profile") == true ||
-                                 currentRoute == Route.Post.route
+                                 currentRoute == Route.Post.route ||
+                                 currentRoute == Route.Mine.route // 核心修正：让我的页面自己处理 TopBar
                 if (!isFullScreen) TopBar(hazeState, currentRoute)
             },
             bottomBar = {
@@ -104,6 +106,7 @@ fun Laisheng() {
                                  currentRoute?.startsWith("follows") == true ||
                                  currentRoute?.startsWith("edit_profile") == true ||
                                  currentRoute == Route.Post.route
+                // 我的页面保留底部栏，但顶栏自己控制
                 if (!isFullScreen) BottomNavigation(hazeState, navController, items)
             }
         ) { paddingValues ->
@@ -114,9 +117,7 @@ fun Laisheng() {
                         ExploreScreen(hazeState, paddingValues, userId, { id -> navController.navigate("moment_detail/$id") }, this@SharedTransitionLayout, this@composable)
                     }
                     composable(Route.Post.route) {
-                        PostScreen(userId = userId, onCancel = { navController.popBackStack() }, onPostSuccess = { 
-                            navController.popBackStack()
-                        })
+                        PostScreen(userId = userId, onCancel = { navController.popBackStack() }, onPostSuccess = { navController.popBackStack() })
                     }
                     composable(Route.Message.route) {
                         MessageScreen(hazeState, userId, paddingValues, { id, name, avatar ->
@@ -135,7 +136,10 @@ fun Laisheng() {
                                 val eB = Uri.encode(bio ?: ""); val eA = Uri.encode(av ?: ""); val eG = Uri.encode(bg ?: "")
                                 navController.navigate("edit_profile/$userId/$eH/$eN/$eB?avatar=$eA&bg=$eG")
                             }, 
-                            onMomentClick = { id -> navController.navigate("moment_detail/$id") }
+                            onMomentClick = { id -> navController.navigate("moment_detail/$id") },
+                            onSettingsClick = { 
+                                Toast.makeText(context, "设置页面开发中...", Toast.LENGTH_SHORT).show()
+                            }
                         )
                     }
                     composable("moment_detail/{momentId}", listOf(navArgument("momentId") { type = NavType.StringType })) { backStackEntry ->
@@ -214,7 +218,7 @@ fun BottomNavigation(hazeState: HazeState, navController: NavController, items: 
                     
                     val iconScale by animateFloatAsState(
                         targetValue = if (isSelected) 1.15f else 1f,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
                     )
                     val iconColor by animateColorAsState(
                         targetValue = if (isSelected) primaryColor else baseColor,

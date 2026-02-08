@@ -55,10 +55,16 @@ interface ApiService {
     suspend fun toggleCollection(@Body request: ToggleRequest): Map<String, Boolean>
 
     @GET("api/collections/user/{userId}")
-    suspend fun getUserCollections(@Path("userId") userId: String): List<Moment>
+    suspend fun getUserCollections(
+        @Path("userId") userId: String,
+        @Query("current_user_id") currentUserId: String? = null // 新增支持
+    ): List<Moment>
 
     @GET("api/likes/user/{userId}")
-    suspend fun getUserLikedMoments(@Path("userId") userId: String): List<Moment>
+    suspend fun getUserLikedMoments(
+        @Path("userId") userId: String,
+        @Query("current_user_id") currentUserId: String? = null // 新增支持
+    ): List<Moment>
 
     // --- 关注相关 ---
     @POST("api/follows/toggle")

@@ -19,7 +19,7 @@ sealed class MineUiState {
         val likedMoments: List<Moment>,
         val collectedMoments: List<Moment>,
         val followCounts: FollowCounts,
-        val mutualFriends: List<User> // 关键修复：添加互关好友列表
+        val mutualFriends: List<User>
     ) : MineUiState()
     data class Error(val message: String) : MineUiState()
 }
@@ -44,44 +44,62 @@ class MineViewModel : ViewModel() {
 
     fun selectTab(tab: MineTab) {
         _selectedTab.value = tab
-        currentUserId?.let { loadData(it, isRefresh = false) }
     }
 
     fun loadData(userId: String, isRefresh: Boolean = true) {
         currentUserId = userId
         viewModelScope.launch {
-            if (isRefresh) {
-                _isRefreshing.value = true
-            }
-
+            if (isRefresh) _isRefreshing.value = true
             try {
-                // 并行获取基础数据
                 val user = repository.getUserProfile(userId)
                 val followCounts = repository.getFollowCounts(userId) ?: FollowCounts(0, 0)
-                val mutualFriends = repository.getMutualFollowing(userId) // 获取互关好友
+                val mutualFriends = repository.getMutualFollowing(userId)
                 
-                // 根据当前 Tab 获取对应列表
-                val moments = repository.getUserMoments(userId, currentUserId = userId)?.data ?: emptyList()
-                val liked = repository.getUserLikedMoments(userId)
-                val collected = repository.getUserCollections(userId)
+                // 1. 获取所有列表的原始数据
+                val momentsRaw = repository.getUserMoments(userId, currentUserId = userId)?.data ?: emptyList()
+                val likedRaw = repository.getUserLikedMoments(userId, currentUserId = userId)
+                val collectedRaw = repository.getUserCollections(userId, currentUserId = userId)
+
+                // 2. 生成已点赞和已收藏的 ID 集合，确保跨 Tab 的一致性
+                val likedIds = likedRaw.map { it.id }.toSet()
+                val collectedIds = collectedRaw.map { it.id }.toSet()
+
+                // 3. 核心修复：强制同步所有 Moment 的状态位，无论它在哪一个 Tab 列表里
+                fun sync(m: Moment) = m.copy(
+                    isLiked = likedIds.contains(m.id),
+                    isCollected = collectedIds.contains(m.id)
+                )
+
+                val moments = momentsRaw.map(::sync)
+                val liked = likedRaw.map(::sync)
+                val collected = collectedRaw.map(::sync)
 
                 if (user != null) {
-                    _uiState.value = MineUiState.Success(
-                        user = user,
-                        moments = moments,
-                        likedMoments = liked,
-                        collectedMoments = collected,
-                        followCounts = followCounts,
-                        mutualFriends = mutualFriends
-                    )
-                } else {
-                    _uiState.value = MineUiState.Error("获取资料失败")
+                    _uiState.value = MineUiState.Success(user, moments, liked, collected, followCounts, mutualFriends)
                 }
             } catch (e: Exception) {
                 _uiState.value = MineUiState.Error(e.message ?: "网络错误")
             } finally {
                 _isRefreshing.value = false
             }
+        }
+    }
+
+    fun toggleLike(momentId: String, userId: String) {
+        viewModelScope.launch {
+            try {
+                repository.toggleLike(userId, momentId)
+                loadData(userId, isRefresh = false) // 交互后立即重新拉取并同步状态
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
+    fun toggleCollect(momentId: String, userId: String) {
+        viewModelScope.launch {
+            try {
+                repository.toggleCollection(userId, momentId)
+                loadData(userId, isRefresh = false)
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 }

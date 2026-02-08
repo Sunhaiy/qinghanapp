@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.decode.SvgDecoder
+import coil.request.ImageRequest
 import com.composables.icons.lucide.*
 import java.io.File
 
@@ -131,7 +133,7 @@ fun PostScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 内容输入区域 - 使用 weight(1f) 占据剩余空间
+            // 内容输入区域
             OutlinedTextField(
                 value = content,
                 onValueChange = { content = it },
@@ -163,7 +165,11 @@ fun PostScreen(
                     items(selectedImageUris) { uri ->
                         Box(modifier = Modifier.size(90.dp)) {
                             AsyncImage(
-                                model = uri, 
+                                model = ImageRequest.Builder(context)
+                                    .data(uri)
+                                    .decoderFactory(SvgDecoder.Factory())
+                                    .crossfade(true)
+                                    .build(),
                                 contentDescription = null, 
                                 modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant), 
                                 contentScale = ContentScale.Crop
@@ -199,7 +205,7 @@ fun PostScreen(
                 }
             }
 
-            // 功能操作区 - 置于底部，随键盘推起
+            // 功能操作区
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

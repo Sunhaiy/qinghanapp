@@ -25,11 +25,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
+import com.composables.icons.lucide.*
 import com.example.laisheng.data.NetworkModule
 import com.example.laisheng.data.model.FollowCounts
 import com.example.laisheng.data.model.User
 import com.example.laisheng.ui.composes.PostCard
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.materials.HazeMaterials
 import dev.chrisbanes.haze.hazeSource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,7 +43,8 @@ fun MineScreen(
     paddingValues: PaddingValues,
     onFollowClick: (String, String, String) -> Unit,
     onEditClick: (String, String, String, String?, String?) -> Unit,
-    onMomentClick: (String) -> Unit, // 新增：点击动态的回调
+    onMomentClick: (String) -> Unit,
+    onSettingsClick: () -> Unit = {},
     viewModel: MineViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -48,16 +52,10 @@ fun MineScreen(
     val selectedTab by viewModel.selectedTab.collectAsState()
 
     LaunchedEffect(userId) {
-        if (userId.isNotEmpty()) {
-            viewModel.loadData(userId)
-        }
+        if (userId.isNotEmpty()) viewModel.loadData(userId)
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .hazeSource(state = hazeState)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = { viewModel.loadData(userId) },
@@ -66,13 +64,13 @@ fun MineScreen(
             when (val state = uiState) {
                 is MineUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(strokeWidth = 2.dp)
                     }
                 }
                 is MineUiState.Success -> {
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = paddingValues
+                        modifier = Modifier.fillMaxSize().hazeSource(state = hazeState),
+                        contentPadding = PaddingValues(bottom = paddingValues.calculateBottomPadding())
                     ) {
                         item {
                             ProfileHeader(
@@ -86,28 +84,33 @@ fun MineScreen(
                             )
                         }
 
-                        item {
-                            SecondaryTabRow(
-                                selectedTabIndex = selectedTab.ordinal,
-                                containerColor = Color.Transparent,
-                                divider = {}
+                        stickyHeader {
+                            Surface(
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                MineTab.entries.forEach { tab ->
-                                    Tab(
-                                        selected = selectedTab == tab,
-                                        onClick = { viewModel.selectTab(tab) },
-                                        text = {
-                                            Text(
-                                                text = when(tab) {
-                                                    MineTab.MOMENTS -> "动态"
-                                                    MineTab.LIKED -> "赞过"
-                                                    MineTab.COLLECTED -> "收藏"
-                                                },
-                                                fontSize = 15.sp,
-                                                fontWeight = if (selectedTab == tab) FontWeight.Bold else FontWeight.Normal
-                                            )
-                                        }
-                                    )
+                                SecondaryTabRow(
+                                    selectedTabIndex = selectedTab.ordinal,
+                                    containerColor = Color.Transparent,
+                                    divider = { HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)) }
+                                ) {
+                                    MineTab.entries.forEach { tab ->
+                                        Tab(
+                                            selected = selectedTab == tab,
+                                            onClick = { viewModel.selectTab(tab) },
+                                            text = {
+                                                Text(
+                                                    text = when(tab) {
+                                                        MineTab.MOMENTS -> "动态"
+                                                        MineTab.LIKED -> "赞过"
+                                                        MineTab.COLLECTED -> "收藏"
+                                                    },
+                                                    fontSize = 14.sp,
+                                                    fontWeight = if (selectedTab == tab) FontWeight.ExtraBold else FontWeight.Medium
+                                                )
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -120,19 +123,22 @@ fun MineScreen(
 
                         if (currentList.isEmpty()) {
                             item {
-                                Box(
-                                    modifier = Modifier.fillParentMaxHeight(0.5f).fillMaxWidth(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("这里空空如也~", color = Color.Gray)
+                                Box(modifier = Modifier.fillParentMaxHeight(0.4f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Lucide.Inbox, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text("暂无内容", color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                                    }
                                 }
                             }
                         } else {
-                            itemsIndexed(currentList) { index, moment ->
+                            itemsIndexed(currentList) { _, moment ->
                                 PostCard(
                                     moment = moment,
-                                    onCardClick = { onMomentClick(moment.id) }, // 接通点击跳转
-                                    onCommentClick = { onMomentClick(moment.id) } // 点击评论按钮也跳转
+                                    onCardClick = { onMomentClick(moment.id) },
+                                    onLikeClick = { viewModel.toggleLike(moment.id, userId) },
+                                    onBookmarkClick = { viewModel.toggleCollect(moment.id, userId) },
+                                    onCommentClick = { onMomentClick(moment.id) }
                                 )
                             }
                         }
@@ -140,11 +146,54 @@ fun MineScreen(
                 }
                 is MineUiState.Error -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = state.message, color = Color.Red)
+                        Text(text = state.message, color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
         }
+
+        // 顶栏：样式完全对齐“探索”页面，且具有上下一致的模糊感
+        MineTopBar(hazeState, onSettingsClick)
+    }
+}
+
+@Composable
+fun MineTopBar(hazeState: HazeState, onSettingsClick: () -> Unit) {
+    var isDarkMode by remember { mutableStateOf(false) }
+    
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin())
+            .background(Color.White.copy(alpha = 0.8f)) // 与 BottomNavigation 和 TopBar 保持相同的透明度
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .height(56.dp)
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.CenterEnd
+        ) {
+            // 设置和夜间按钮样式：去掉了圆底，直接使用标准 IconButton 样式与探索页面对齐
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { isDarkMode = !isDarkMode }) {
+                    Icon(
+                        imageVector = if (isDarkMode) Lucide.Sun else Lucide.Moon, 
+                        contentDescription = null, 
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                IconButton(onClick = onSettingsClick) {
+                    Icon(
+                        imageVector = Lucide.Settings, 
+                        contentDescription = null, 
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+        }
+        HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
     }
 }
 
@@ -159,77 +208,76 @@ fun ProfileHeader(
     val context = LocalContext.current
     
     Column(modifier = Modifier.fillMaxWidth()) {
-        Box(modifier = Modifier.fillMaxWidth().height(200.dp)) {
+        // 封面高度调整为 280.dp
+        Box(modifier = Modifier.fillMaxWidth().height(280.dp)) {
             AsyncImage(
                 model = NetworkModule.formatUrl(user.bgImage) ?: "https://picsum.photos/1000/500",
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f))))
-            )
-            
-            SmallFloatingActionButton(
-                onClick = onEditClick,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 48.dp, end = 16.dp),
-                containerColor = Color.White.copy(alpha = 0.7f),
-                contentColor = Color.Black
-            ) {
-                Text("编辑", fontSize = 12.sp)
-            }
+            Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.3f)))))
         }
 
-        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+        Box(modifier = Modifier.padding(horizontal = 20.dp)) {
             Column {
-                Spacer(modifier = Modifier.height(40.dp))
-                Text(text = user.nickname, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text(text = user.handle, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                
-                Row(modifier = Modifier.padding(vertical = 12.dp)) {
-                    StatItem(count = followCounts.followingCount, label = "关注") { onStatClick("following", "我的关注") }
-                    Spacer(modifier = Modifier.width(20.dp))
-                    StatItem(count = followCounts.followersCount, label = "粉丝") { onStatClick("followers", "我的粉丝") }
-                    Spacer(modifier = Modifier.width(20.dp))
-                    StatItem(count = mutualCount, label = "好友") { onStatClick("mutual", "互关好友") }
+                Spacer(modifier = Modifier.height(55.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = user.nickname, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold, fontSize = 22.sp), modifier = Modifier.weight(1f))
+                    OutlinedButton(
+                        onClick = onEditClick, 
+                        shape = RoundedCornerShape(12.dp), 
+                        modifier = Modifier.height(36.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp)
+                    ) {
+                        Text("编辑资料", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
+                // 修复：严谨处理 handle，防止出现两个 @
+                Text(
+                    text = "@${user.handle?.replace("@", "") ?: ""}", 
+                    style = MaterialTheme.typography.bodyMedium, 
+                    color = MaterialTheme.colorScheme.outline
+                )
+                
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                    text = user.bio ?: "还没有写个性签名哦", 
+                    style = MaterialTheme.typography.bodyMedium, 
+                    lineHeight = 22.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                )
 
-                Text(text = user.bio ?: "这个用户很懒，什么都没写", style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(16.dp))
+                Row(modifier = Modifier.padding(vertical = 18.dp)) {
+                    StatItem(count = followCounts.followingCount, label = "关注") { onStatClick("following", "关注") }
+                    Spacer(modifier = Modifier.width(28.dp))
+                    StatItem(count = followCounts.followersCount, label = "粉丝") { onStatClick("followers", "粉丝") }
+                    Spacer(modifier = Modifier.width(28.dp))
+                    StatItem(count = mutualCount, label = "好友") { onStatClick("mutual", "好友") }
+                }
             }
 
+            // 头像位置优化
             Surface(
-                modifier = Modifier.offset(y = (-50).dp).size(90.dp).border(3.dp, Color.White, CircleShape),
+                modifier = Modifier.offset(y = (-50).dp).size(100.dp).border(4.dp, MaterialTheme.colorScheme.surface, CircleShape),
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer
+                tonalElevation = 4.dp
             ) {
                 AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(NetworkModule.formatUrl(user.avatar))
-                        .decoderFactory(SvgDecoder.Factory())
-                        .build(),
-                    contentDescription = null,
+                    model = ImageRequest.Builder(context).data(NetworkModule.formatUrl(user.avatar)).decoderFactory(SvgDecoder.Factory()).crossfade(true).build(),
+                    contentDescription = "Avatar",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
             }
         }
-        HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.3f))
     }
 }
 
 @Composable
 fun StatItem(count: Int, label: String, onClick: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.clickable { onClick() }
-    ) {
-        Text(text = count.toString(), fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(text = label, color = Color.Gray, fontSize = 14.sp)
+    Column(modifier = Modifier.clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, onClick = onClick)) {
+        Text(text = count.toString(), fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+        Text(text = label, color = MaterialTheme.colorScheme.outline, fontSize = 12.sp)
     }
 }

@@ -66,9 +66,9 @@ class MomentRepository(private val apiService: ApiService) {
     }
 
     // 7. 获取用户的收藏列表
-    suspend fun getUserCollections(userId: String): List<Moment> {
+    suspend fun getUserCollections(userId: String, currentUserId: String? = null): List<Moment> {
         return try {
-            apiService.getUserCollections(userId)
+            apiService.getUserCollections(userId, currentUserId)
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
@@ -76,9 +76,9 @@ class MomentRepository(private val apiService: ApiService) {
     }
 
     // 8. 获取用户点赞列表
-    suspend fun getUserLikedMoments(userId: String): List<Moment> {
+    suspend fun getUserLikedMoments(userId: String, currentUserId: String? = null): List<Moment> {
         return try {
-            apiService.getUserLikedMoments(userId)
+            apiService.getUserLikedMoments(userId, currentUserId)
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
