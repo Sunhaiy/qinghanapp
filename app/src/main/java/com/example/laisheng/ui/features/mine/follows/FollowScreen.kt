@@ -34,6 +34,7 @@ fun FollowScreen(
     title: String,
     type: String, // "followers", "following", "mutual"
     onBack: () -> Unit,
+    onUserClick: (String) -> Unit, // Callback
     viewModel: FollowViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -94,7 +95,7 @@ fun FollowScreen(
                                 }
                             } else {
                                 items(state.users) { user ->
-                                    UserItem(user)
+                                    UserItem(user, onUserClick = { onUserClick(user.id) })
                                 }
                             }
                         }
@@ -109,7 +110,7 @@ fun FollowScreen(
 }
 
 @Composable
-fun UserItem(user: User) {
+private fun UserItem(user: User, onUserClick: () -> Unit) {
     val context = LocalContext.current
     Row(
         modifier = Modifier
@@ -146,7 +147,7 @@ fun UserItem(user: User) {
         }
         
         OutlinedButton(
-            onClick = { /* 查看用户资料 */ },
+            onClick = { onUserClick() },
             shape = RoundedCornerShape(20.dp),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
             modifier = Modifier.height(32.dp)

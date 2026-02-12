@@ -115,6 +115,7 @@ fun Laisheng(mainViewModel: MainViewModel) {
                                  currentRoute?.startsWith("follows") == true ||
                                  currentRoute?.startsWith("edit_profile") == true ||
                                  currentRoute?.startsWith("user_profile") == true ||
+                                 currentRoute == "settings" || // Hide top bar for settings
                                  currentRoute == Route.Post.route ||
                                  currentRoute == Route.Mine.route // 核心修正：让我的页面自己处理 TopBar
                 if (!isFullScreen) TopBar(hazeState, currentRoute)
@@ -125,6 +126,7 @@ fun Laisheng(mainViewModel: MainViewModel) {
                                  currentRoute?.startsWith("follows") == true ||
                                  currentRoute?.startsWith("edit_profile") == true ||
                                  currentRoute?.startsWith("user_profile") == true ||
+                                 currentRoute == "settings" || // Hide bottom bar for settings
                                  currentRoute == Route.Post.route
                 // 我的页面保留底部栏，但顶栏自己控制
                 if (!isFullScreen) BottomNavigation(hazeState, navController, items)
@@ -200,7 +202,13 @@ fun Laisheng(mainViewModel: MainViewModel) {
                         val uid = backStackEntry.arguments?.getString("userId") ?: ""
                         val tit = backStackEntry.arguments?.getString("title") ?: "列表"
                         val typ = backStackEntry.arguments?.getString("type") ?: ""
-                        FollowScreen(uid, tit, typ, { navController.popBackStack() })
+                        FollowScreen(
+                            userId = uid, 
+                            title = tit, 
+                            type = typ, 
+                            onBack = { navController.popBackStack() },
+                            onUserClick = { targetUid -> navController.navigate("user_profile/$targetUid") }
+                        )
                     }
                     composable("edit_profile/{userId}/{handle}/{nickname}/{bio}?avatar={avatar}&bg={bg}", listOf(
                         navArgument("userId") { type = NavType.StringType },
@@ -231,7 +239,8 @@ fun Laisheng(mainViewModel: MainViewModel) {
                                 val encName = Uri.encode(name); val encAv = Uri.encode(avatar ?: "")
                                 navController.navigate("chat/$id/$encName?avatar=$encAv")
                             },
-                            onMomentClick = { id -> navController.navigate("moment_detail/$id") }
+                            onMomentClick = { id -> navController.navigate("moment_detail/$id") },
+                            onFollowClick = { uid, title, type -> navController.navigate("follows/$uid/$title/$type") }
                         )
                     }
                     composable("settings") {

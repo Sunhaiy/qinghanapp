@@ -52,6 +52,7 @@ fun UserProfileScreen(
     onBack: () -> Unit,
     onChatClick: (String, String, String?) -> Unit,
     onMomentClick: (String) -> Unit,
+    onFollowClick: (String, String, String) -> Unit, // userId, title, type
     viewModel: UserProfileViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -107,7 +108,8 @@ fun UserProfileScreen(
                                 isMe = user.id == currentUserId,
                                 followCounts = state.followCounts,
                                 onFollowClick = { viewModel.toggleFollow(user.id, currentUserId) },
-                                onChatClick = { onChatClick(user.id, user.nickname, user.avatar) }
+                                onChatClick = { onChatClick(user.id, user.nickname, user.avatar) },
+                                onStatClick = { type, title -> onFollowClick(user.id, title, type) }
                             )
                         }
                         
@@ -244,7 +246,8 @@ fun ProfileHeaderSection(
     isMe: Boolean,
     followCounts: com.example.laisheng.data.model.FollowCounts,
     onFollowClick: () -> Unit,
-    onChatClick: () -> Unit
+    onChatClick: () -> Unit,
+    onStatClick: (String, String) -> Unit // type, title
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         // 1. Banner & Avatar Container
@@ -371,9 +374,9 @@ fun ProfileHeaderSection(
             
             // Stats
             Row(modifier = Modifier.fillMaxWidth()) {
-                StatItem(count = followCounts.followersCount, label = "粉丝")
+                ProfileStatItem(count = followCounts.followersCount, label = "粉丝") { onStatClick("followers", "粉丝") }
                 Spacer(modifier = Modifier.width(Dimens.PaddingLarge))
-                StatItem(count = followCounts.followingCount, label = "关注")
+                ProfileStatItem(count = followCounts.followingCount, label = "关注") { onStatClick("following", "关注") }
             }
             
             Spacer(modifier = Modifier.height(Dimens.PaddingLarge))
@@ -382,8 +385,15 @@ fun ProfileHeaderSection(
 }
 
 @Composable
-fun StatItem(count: Int, label: String) {
-    Row(verticalAlignment = Alignment.Bottom) {
+private fun ProfileStatItem(count: Int, label: String, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.Bottom,
+        modifier = Modifier.clickable(
+            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+            indication = null,
+            onClick = onClick
+        )
+    ) {
         Text(
             text = count.toString(),
             style = MaterialTheme.typography.titleMedium,

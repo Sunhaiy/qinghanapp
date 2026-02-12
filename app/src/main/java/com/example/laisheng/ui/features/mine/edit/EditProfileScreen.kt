@@ -84,11 +84,10 @@ fun EditProfileScreen(
                     if (uiState is EditUiState.Loading) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     } else {
-                        IconButton(onClick = {
-                            // 修正：将 initialAvatar 和 initialBgImage 传进去作为兜底，防止被清空
+                        TextButton(onClick = {
                             viewModel.updateProfile(userId, nickname, bio, avatarUri, bgUri, initialAvatar, initialBgImage, context)
                         }) {
-                            Icon(Icons.Default.Check, contentDescription = "保存", tint = MaterialTheme.colorScheme.primary)
+                            Text("保存", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -101,36 +100,53 @@ fun EditProfileScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // 背景图编辑区
+            // 背景 & 头像 编辑区域
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { bgLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+                    .height(260.dp) // 增加高度以容纳头像 + 提示
             ) {
-                AsyncImage(
-                    model = bgUri ?: NetworkModule.formatUrl(initialBgImage),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color.White)
-                }
-            }
-
-            // 头像编辑区
-            Box(modifier = Modifier.padding(horizontal = 16.dp).offset(y = (-40).dp)) {
-                Surface(
+                // 背景图
+                Box(
                     modifier = Modifier
-                        .size(80.dp)
-                        .border(3.dp, Color.White, CircleShape)
-                        .clickable { avatarLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { bgLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
                 ) {
-                    Box {
+                    AsyncImage(
+                        model = bgUri ?: NetworkModule.formatUrl(initialBgImage),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.3f)), 
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color.White)
+                            Text("点击更换背景", color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                        }
+                    }
+                }
+
+                // 头像 (Overlapping)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 24.dp, bottom = 0.dp) // Align slightly above bottom of outer box
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
+                            .border(4.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { avatarLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+                    ) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(avatarUri ?: NetworkModule.formatUrl(initialAvatar))
@@ -140,25 +156,70 @@ fun EditProfileScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
-                        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.3f)), 
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
                         }
                     }
                 }
             }
 
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 表单区域
+            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                // Handle (Read Only)
                 Text(text = "数字身份", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                Text(text = handle, style = MaterialTheme.typography.bodyLarge, color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp))
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp, color = Color.LightGray)
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(value = nickname, onValueChange = { nickname = it }, label = { Text("昵称") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp))
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(value = bio, onValueChange = { bio = it }, label = { Text("个人简介") }, modifier = Modifier.fillMaxWidth(), minLines = 3, shape = RoundedCornerShape(12.dp))
+                Text(
+                    text = handle, 
+                    style = MaterialTheme.typography.bodyLarge, 
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                )
+                
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Nickname
+                OutlinedTextField(
+                    value = nickname, 
+                    onValueChange = { if (it.length <= 20) nickname = it }, 
+                    label = { Text("昵称") }, 
+                    modifier = Modifier.fillMaxWidth(), 
+                    singleLine = true, 
+                    shape = RoundedCornerShape(12.dp),
+                    supportingText = { Text("${nickname.length}/20") }
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Bio
+                OutlinedTextField(
+                    value = bio, 
+                    onValueChange = { if (it.length <= 100) bio = it }, 
+                    label = { Text("个人简介") }, 
+                    modifier = Modifier.fillMaxWidth(), 
+                    minLines = 3, 
+                    maxLines = 5,
+                    shape = RoundedCornerShape(12.dp),
+                    supportingText = { Text("${bio.length}/100") }
+                )
+
                 if (uiState is EditUiState.Error) {
-                    Text(text = (uiState as EditUiState.Error).message, color = Color.Red, modifier = Modifier.padding(top = 16.dp))
+                    Text(
+                        text = (uiState as EditUiState.Error).message, 
+                        color = MaterialTheme.colorScheme.error, 
+                        modifier = Modifier.padding(top = 16.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
+            
+            Spacer(modifier = Modifier.height(50.dp))
         }
     }
 }
