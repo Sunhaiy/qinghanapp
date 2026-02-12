@@ -79,7 +79,15 @@ fun Laisheng(mainViewModel: MainViewModel) {
     var loggedInUserId by remember { mutableStateOf(userPrefs.getUserId()) }
 
     LaunchedEffect(loggedInUserId) {
-        loggedInUserId?.let { id -> SocketManager.connect(id) }
+        loggedInUserId?.let { id -> 
+            SocketManager.connect(id)
+            // Send heartbeat to update IP location
+            try {
+                com.example.laisheng.data.remote.NetworkModule.apiService.heartbeat(mapOf("userId" to id))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     DisposableEffect(Unit) {

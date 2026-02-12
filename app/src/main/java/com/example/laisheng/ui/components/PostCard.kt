@@ -68,7 +68,8 @@ fun PostCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onCardClick)
-            .padding(horizontal = Dimens.PaddingMedium, vertical = Dimens.PaddingSmall)
+            .clickable(onClick = onCardClick)
+            .padding(all = Dimens.PaddingMedium) // Use consistent padding (e.g. 16.dp) for top/bottom/left/right
     ) {
         // 1. 用户信息
         Row(
@@ -163,8 +164,10 @@ fun PostCard(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
-        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+        // Remove internal Spacer and Divider to allow parent to control separation
+        // Spacer(modifier = Modifier.height(Dimens.PaddingMedium)) 
+        // HorizontalDivider(...)
     }
 }
 

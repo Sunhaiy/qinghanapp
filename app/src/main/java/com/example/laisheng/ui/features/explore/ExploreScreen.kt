@@ -73,6 +73,7 @@ fun ExploreScreen(
                             }
                         )
                     }
+                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
                     
                     if (index >= moments.size - 2) {
                         LaunchedEffect(moments.size) {

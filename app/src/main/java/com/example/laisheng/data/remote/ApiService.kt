@@ -13,6 +13,9 @@ interface ApiService {
     @POST("api/users/register")
     suspend fun register(@Body request: Map<String, String>): User
 
+    @POST("api/users/heartbeat")
+    suspend fun heartbeat(@Body request: Map<String, String>): Map<String, Any>
+
     @GET("api/users/{id}")
     suspend fun getUser(
         @Path("id") id: String,
