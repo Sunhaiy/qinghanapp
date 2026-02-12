@@ -107,7 +107,8 @@ fun UserProfileScreen(
                                     onCardClick = { onMomentClick(moment.id) },
                                     onUserClick = { /* Already on profile */ },
                                     onLikeClick = { viewModel.onLikeClick(currentUserId, moment.id) },
-                                    onBookmarkClick = { viewModel.onBookmarkClick(currentUserId, moment.id) }
+                                    onBookmarkClick = { viewModel.onBookmarkClick(currentUserId, moment.id) },
+                                    onCommentClick = { onMomentClick(moment.id) }
                                 )
                                 HorizontalDivider(thickness = Dimens.PaddingSmall, color = MaterialTheme.colorScheme.surfaceVariant)
                             }

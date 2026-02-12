@@ -31,7 +31,7 @@ class UserProfileViewModel : ViewModel() {
             _uiState.value = UserProfileUiState.Loading
             try {
                 // 并行请求优化：使用 async/await (这里保持简单顺次调用，实际项目中可用 async)
-                val user = repository.getUserProfile(targetUserId) ?: throw Exception("用户不存在")
+                val user = repository.getUserProfile(targetUserId, currentUserId) ?: throw Exception("用户不存在")
                 val momentsResponse = repository.getUserMoments(targetUserId, currentUserId = currentUserId)
                 val followCounts = repository.getFollowCounts(targetUserId) ?: FollowCounts(0, 0)
                 
@@ -95,11 +95,7 @@ class UserProfileViewModel : ViewModel() {
             if (currentState is UserProfileUiState.Success) {
                 val updatedMoments = currentState.moments.map { moment ->
                     if (moment.id == momentId) {
-                        // 假设模型中有 isCollected 字段
-                        // 如果没有，可能无法在 UI 上立即反映（除非 PostCard 不显示收藏态）
-                        // 之前的 replace_file_content 只看到了 moments map，没看到 isCollected 属性。
-                        // 检查 Moment.kt 可能需要。目前假设它有。
-                        moment // .copy(isCollected = isNowCollected) 暂时不更新，除非确认 Moment 有此字段
+                        moment.copy(isCollected = isNowCollected)
                     } else moment
                 }
                 _uiState.value = currentState.copy(moments = updatedMoments)

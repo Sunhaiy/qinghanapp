@@ -14,7 +14,10 @@ interface ApiService {
     suspend fun register(@Body request: Map<String, String>): User
 
     @GET("api/users/{id}")
-    suspend fun getUser(@Path("id") id: String): User
+    suspend fun getUser(
+        @Path("id") id: String,
+        @Query("current_user_id") currentUserId: String? = null
+    ): User
 
     @PUT("api/users/{id}")
     suspend fun updateProfile(

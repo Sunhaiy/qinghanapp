@@ -16,9 +16,9 @@ class MomentRepository(private val apiService: ApiService) {
     }
 
     // 2. 获取用户资料
-    suspend fun getUserProfile(userId: String): User? {
+    suspend fun getUserProfile(userId: String, currentUserId: String? = null): User? {
         return try {
-            apiService.getUser(userId)
+            apiService.getUser(userId, currentUserId)
         } catch (e: Exception) {
             e.printStackTrace()
             null
