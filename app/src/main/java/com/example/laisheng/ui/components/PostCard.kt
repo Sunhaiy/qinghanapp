@@ -43,7 +43,8 @@ fun PostCard(
     onMoreClick: () -> Unit = {},
     onLikeClick: () -> Unit = {},
     onCommentClick: () -> Unit = {},
-    onBookmarkClick: () -> Unit = {}
+    onBookmarkClick: () -> Unit = {},
+    onUserClick: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val nickname = moment.nickname ?: "未知用户"
@@ -75,7 +76,10 @@ fun PostCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { onUserClick(moment.userId) }
+            ) {
                 AsyncImage(
                     model = ImageRequest.Builder(context).data(avatarUrl).decoderFactory(SvgDecoder.Factory()).crossfade(true).build(),
                     contentDescription = null,

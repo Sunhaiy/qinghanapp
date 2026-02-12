@@ -25,6 +25,7 @@ fun ExploreScreen(
     paddingValues: PaddingValues,
     userId: String,
     onMomentClick: (String) -> Unit,
+    onUserClick: (String) -> Unit, // Add callback
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: ExploreViewModel = viewModel()
@@ -62,6 +63,7 @@ fun ExploreScreen(
                                 animatedVisibilityScope = animatedVisibilityScope
                             ),
                             onCardClick = { onMomentClick(moment.id) },
+                            onUserClick = { onUserClick(moment.userId) }, // Wire up
                             onLikeClick = {
                                 viewModel.onLikeClick(userId, moment.id)
                             },

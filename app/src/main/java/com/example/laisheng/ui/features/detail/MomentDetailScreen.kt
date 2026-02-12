@@ -39,6 +39,7 @@ fun MomentDetailScreen(
     momentId: String,
     userId: String,
     onBack: () -> Unit,
+    onUserClick: (String) -> Unit, // Add callback
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: MomentDetailViewModel = viewModel()
@@ -112,6 +113,7 @@ fun MomentDetailScreen(
                                         rememberSharedContentState(key = "item-${state.moment.id}"),
                                         animatedVisibilityScope = animatedVisibilityScope
                                     ),
+                                    onUserClick = { onUserClick(state.moment.userId) }, // Wire up
                                     onLikeClick = { viewModel.onLikeClick(userId, state.moment.id) },
                                     onBookmarkClick = { viewModel.onBookmarkClick(userId, state.moment.id) }
                                 )

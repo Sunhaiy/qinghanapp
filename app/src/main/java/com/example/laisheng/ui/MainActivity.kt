@@ -44,9 +44,11 @@ import com.example.laisheng.ui.features.login.LoginScreen
 import com.example.laisheng.ui.features.message.ChatDetailScreen
 import com.example.laisheng.ui.features.message.MessageScreen
 import com.example.laisheng.ui.features.mine.MineScreen
+import com.example.laisheng.ui.features.mine.UserProfileScreen
 import com.example.laisheng.ui.features.mine.edit.EditProfileScreen
 import com.example.laisheng.ui.features.mine.follows.FollowScreen
 import com.example.laisheng.ui.features.post.PostScreen
+import com.example.laisheng.ui.features.settings.SettingsScreen
 import com.example.laisheng.ui.theme.LaishengTheme
 
 import dev.chrisbanes.haze.HazeState
@@ -104,6 +106,7 @@ fun Laisheng(mainViewModel: MainViewModel) {
                                  currentRoute?.startsWith("chat") == true ||
                                  currentRoute?.startsWith("follows") == true ||
                                  currentRoute?.startsWith("edit_profile") == true ||
+                                 currentRoute?.startsWith("user_profile") == true ||
                                  currentRoute == Route.Post.route ||
                                  currentRoute == Route.Mine.route // 核心修正：让我的页面自己处理 TopBar
                 if (!isFullScreen) TopBar(hazeState, currentRoute)
@@ -113,6 +116,7 @@ fun Laisheng(mainViewModel: MainViewModel) {
                                  currentRoute?.startsWith("chat") == true ||
                                  currentRoute?.startsWith("follows") == true ||
                                  currentRoute?.startsWith("edit_profile") == true ||
+                                 currentRoute?.startsWith("user_profile") == true ||
                                  currentRoute == Route.Post.route
                 // 我的页面保留底部栏，但顶栏自己控制
                 if (!isFullScreen) BottomNavigation(hazeState, navController, items)
@@ -122,7 +126,15 @@ fun Laisheng(mainViewModel: MainViewModel) {
                 NavHost(navController = navController, startDestination = Route.Home.route) {
                     composable(Route.Home.route) { HomeScreen(hazeState, paddingValues) }
                     composable(Route.Explore.route) {
-                        ExploreScreen(hazeState, paddingValues, userId, { id -> navController.navigate("moment_detail/$id") }, this@SharedTransitionLayout, this@composable)
+                        ExploreScreen(
+                            hazeState, 
+                            paddingValues, 
+                            userId, 
+                            { id -> navController.navigate("moment_detail/$id") }, 
+                            { uid -> navController.navigate("user_profile/$uid") }, // Pass onUserClick
+                            this@SharedTransitionLayout, 
+                            this@composable
+                        )
                     }
                     composable(Route.Post.route) {
                         PostScreen(userId = userId, onCancel = { navController.popBackStack() }, onPostSuccess = { navController.popBackStack() })
@@ -146,14 +158,21 @@ fun Laisheng(mainViewModel: MainViewModel) {
                             }, 
                             onMomentClick = { id -> navController.navigate("moment_detail/$id") },
                             onSettingsClick = { 
-                                // To be implemented
+                                navController.navigate("settings")
                             },
                             mainViewModel = mainViewModel
                         )
                     }
                     composable("moment_detail/{momentId}", listOf(navArgument("momentId") { type = NavType.StringType })) { backStackEntry ->
                         val id = backStackEntry.arguments?.getString("momentId") ?: ""
-                        MomentDetailScreen(id, userId, { navController.popBackStack() }, this@SharedTransitionLayout, this@composable)
+                        MomentDetailScreen(
+                            id, 
+                            userId, 
+                            { navController.popBackStack() }, 
+                            { uid -> navController.navigate("user_profile/$uid") },
+                            this@SharedTransitionLayout, 
+                            this@composable
+                        )
                     }
                     composable("chat/{otherId}/{nickname}?avatar={avatar}", listOf(
                         navArgument("otherId") { type = NavType.StringType },
@@ -192,6 +211,29 @@ fun Laisheng(mainViewModel: MainViewModel) {
                             initialBgImage = Uri.decode(backStackEntry.arguments?.getString("bg") ?: ""),
                             onBack = { navController.popBackStack() },
                             onSaveSuccess = { navController.popBackStack() }
+                        )
+                    }
+                    composable("user_profile/{userId}", listOf(navArgument("userId") { type = NavType.StringType })) { backStackEntry ->
+                        val targetUid = backStackEntry.arguments?.getString("userId") ?: ""
+                        UserProfileScreen(
+                            userId = targetUid,
+                            currentUserId = userId,
+                            onBack = { navController.popBackStack() },
+                            onChatClick = { id, name, avatar ->
+                                val encName = Uri.encode(name); val encAv = Uri.encode(avatar ?: "")
+                                navController.navigate("chat/$id/$encName?avatar=$encAv")
+                            },
+                            onMomentClick = { id -> navController.navigate("moment_detail/$id") }
+                        )
+                    }
+                    composable("settings") {
+                        SettingsScreen(
+                            onBack = { navController.popBackStack() },
+                            onLogout = {
+                                userPrefs.clear()
+                                loggedInUserId = null
+                            },
+                            mainViewModel = mainViewModel
                         )
                     }
                 }
