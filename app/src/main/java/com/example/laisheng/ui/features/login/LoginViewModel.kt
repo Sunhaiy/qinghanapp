@@ -2,7 +2,7 @@ package com.example.laisheng.ui.features.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.laisheng.data.NetworkModule
+import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

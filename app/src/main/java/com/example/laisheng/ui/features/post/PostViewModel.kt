@@ -4,7 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.laisheng.data.NetworkModule
+import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.Attachment
 import com.example.laisheng.data.model.CreateMomentRequest
 import com.example.laisheng.data.model.MomentContent

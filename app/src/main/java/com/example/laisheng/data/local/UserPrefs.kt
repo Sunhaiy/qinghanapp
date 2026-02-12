@@ -1,4 +1,4 @@
-package com.example.laisheng.util
+package com.example.laisheng.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -14,7 +14,17 @@ class UserPrefs(context: Context) {
         return prefs.getString("user_id", null)
     }
 
+
+    // Theme: 0 = System, 1 = Light, 2 = Dark
+    fun saveThemeMode(mode: Int) {
+        prefs.edit().putInt("theme_mode", mode).apply()
+    }
+
+    fun getThemeMode(): Int {
+        return prefs.getInt("theme_mode", 0) // Default to System
+    }
+
     fun clear() {
-        prefs.edit().remove("user_id").apply()
+        prefs.edit().remove("user_id").remove("theme_mode").apply()
     }
 }

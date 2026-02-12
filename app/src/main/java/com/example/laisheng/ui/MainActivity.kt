@@ -34,8 +34,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.composables.icons.lucide.*
+import com.example.laisheng.data.local.UserPrefs
 import com.example.laisheng.data.remote.SocketManager
-import com.example.laisheng.navigation.Route
+import com.example.laisheng.ui.navigation.Route
 import com.example.laisheng.ui.features.detail.MomentDetailScreen
 import com.example.laisheng.ui.features.explore.ExploreScreen
 import com.example.laisheng.ui.features.home.HomeScreen
@@ -47,7 +48,7 @@ import com.example.laisheng.ui.features.mine.edit.EditProfileScreen
 import com.example.laisheng.ui.features.mine.follows.FollowScreen
 import com.example.laisheng.ui.features.post.PostScreen
 import com.example.laisheng.ui.theme.LaishengTheme
-import com.example.laisheng.util.UserPrefs
+
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.materials.HazeMaterials
@@ -57,13 +58,20 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { LaishengTheme { Laisheng() } }
+        val userPrefs = UserPrefs(this)
+        val mainViewModel = MainViewModel(userPrefs)
+        setContent {
+            val themeMode by mainViewModel.themeMode.collectAsState()
+            LaishengTheme(themeMode = themeMode) {
+                Laisheng(mainViewModel)
+            }
+        }
     }
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun Laisheng() {
+fun Laisheng(mainViewModel: MainViewModel) {
     val context = LocalContext.current
     val userPrefs = remember { UserPrefs(context) }
     var loggedInUserId by remember { mutableStateOf(userPrefs.getUserId()) }
@@ -138,8 +146,9 @@ fun Laisheng() {
                             }, 
                             onMomentClick = { id -> navController.navigate("moment_detail/$id") },
                             onSettingsClick = { 
-                                Toast.makeText(context, "设置页面开发中...", Toast.LENGTH_SHORT).show()
-                            }
+                                // To be implemented
+                            },
+                            mainViewModel = mainViewModel
                         )
                     }
                     composable("moment_detail/{momentId}", listOf(navArgument("momentId") { type = NavType.StringType })) { backStackEntry ->
@@ -196,17 +205,19 @@ fun BottomNavigation(hazeState: HazeState, navController: NavController, items: 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val primaryColor = MaterialTheme.colorScheme.primary
-    val baseColor = Color(0xFF666666)
+    val baseColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin())
-            .background(Color.White.copy(alpha = 0.85f))
+            .background(backgroundColor)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
     ) {
         Column {
-            HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.3f))
+            HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
             Row(
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -245,7 +256,7 @@ fun BottomNavigation(hazeState: HazeState, navController: NavController, items: 
                                 modifier = Modifier.size(40.dp),
                                 shape = CircleShape, color = primaryColor, shadowElevation = 4.dp
                             ) {
-                                Icon(Lucide.Plus, null, tint = Color.White, modifier = Modifier.padding(8.dp))
+                                Icon(Lucide.Plus, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(8.dp))
                             }
                         } else {
                             Icon(
@@ -266,11 +277,15 @@ fun BottomNavigation(hazeState: HazeState, navController: NavController, items: 
 @Composable
 fun TopBar(hazeState: HazeState, currentRoute: String?) {
     val itemsList = listOf(Route.Home, Route.Explore, Route.Post, Route.Message, Route.Mine)
+    val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    val contentColor = MaterialTheme.colorScheme.onSurface
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin())
-            .background(Color.White.copy(alpha = 0.8f))
+            .background(backgroundColor)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
     ) {
         Box(
@@ -279,19 +294,19 @@ fun TopBar(hazeState: HazeState, currentRoute: String?) {
         ) {
             when (currentRoute) {
                 Route.Home.route -> Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "来声", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
-                    IconButton(onClick = {}) { Icon(imageVector = Lucide.Bell, contentDescription = null) }
+                    Text(text = "来声", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = contentColor)
+                    IconButton(onClick = {}) { Icon(imageVector = Lucide.Bell, contentDescription = null, tint = contentColor) }
                 }
                 Route.Explore.route -> Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "探索", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
-                    IconButton(onClick = {}) { Icon(imageVector = Lucide.Search, contentDescription = null) }
+                    Text(text = "探索", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = contentColor)
+                    IconButton(onClick = {}) { Icon(imageVector = Lucide.Search, contentDescription = null, tint = contentColor) }
                 }
                 else -> {
                     val title = itemsList.find { it.route == currentRoute }?.title ?: "来声"
-                    Text(text = title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(text = title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = contentColor)
                 }
             }
         }
-        HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
+        HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
     }
 }

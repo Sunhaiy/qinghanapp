@@ -31,7 +31,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
-import com.example.laisheng.data.NetworkModule
+import com.example.laisheng.data.remote.NetworkModule
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

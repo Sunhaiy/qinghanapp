@@ -2,7 +2,7 @@ package com.example.laisheng.ui.features.mine.follows
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.laisheng.data.NetworkModule
+import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.User
 import com.example.laisheng.data.repository.MomentRepository
 import kotlinx.coroutines.flow.MutableStateFlow

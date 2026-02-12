@@ -1,4 +1,4 @@
-package com.example.laisheng.ui.composes
+package com.example.laisheng.ui.components
 
 import android.media.AudioAttributes
 import android.media.MediaPlayer
@@ -29,9 +29,11 @@ import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import com.composables.icons.lucide.*
-import com.example.laisheng.data.NetworkModule
+
+import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.Attachment
 import com.example.laisheng.data.model.Moment
+import com.example.laisheng.ui.theme.Dimens
 
 @Composable
 fun PostCard(
@@ -48,7 +50,6 @@ fun PostCard(
     val handle = moment.handle ?: ""
     
     val avatarUrl = remember(moment.avatar) { NetworkModule.formatUrl(moment.avatar) }
-    val avatarLetter = if (nickname.isNotEmpty()) nickname.take(1).uppercase() else "?"
 
     // 分离语音和图片附件
     val imageAttachments = remember(moment.content.attachments) {
@@ -66,7 +67,7 @@ fun PostCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onCardClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = Dimens.PaddingMedium, vertical = Dimens.PaddingSmall)
     ) {
         // 1. 用户信息
         Row(
@@ -78,10 +79,10 @@ fun PostCard(
                 AsyncImage(
                     model = ImageRequest.Builder(context).data(avatarUrl).decoderFactory(SvgDecoder.Factory()).crossfade(true).build(),
                     contentDescription = null,
-                    modifier = Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.size(Dimens.AvatarSizeMedium).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
                     contentScale = ContentScale.Crop
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
                 Column {
                     Text(nickname, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                     if (handle.isNotEmpty()) {
@@ -89,34 +90,34 @@ fun PostCard(
                     }
                 }
             }
-            IconButton(onClick = onMoreClick, modifier = Modifier.size(32.dp)) {
-                Icon(Lucide.Ellipsis, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(16.dp))
+            IconButton(onClick = onMoreClick, modifier = Modifier.size(Dimens.IconSizeLarge)) {
+                Icon(Lucide.Ellipsis, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(Dimens.IconSizeSmall))
             }
         }
 
         // 2. 文字内容
         if (!moment.content.text.isNullOrBlank()) {
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(Dimens.PaddingSmall))
             Text(
                 text = moment.content.text!!,
-                style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp),
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
 
         // 3. 语音内容 (独立分层展示)
         voiceAttachment?.let { voice ->
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Dimens.PaddingSmall))
             VoicePlayerTag(url = voice.url, duration = voice.duration ?: 0)
         }
 
         // 4. 图片内容 (动态网格)
         if (imageAttachments.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Dimens.PaddingSmall))
             ImageGrid(imageAttachments)
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
 
         // 5. 底部工具栏
         Row(
@@ -131,35 +132,34 @@ fun PostCard(
                     count = moment.likesCount,
                     contentDescription = "点赞",
                     isActive = moment.isLiked,
-                    activeColor = Color(0xFFE91E63),
+                    activeColor = MaterialTheme.colorScheme.primary,
                     onClick = onLikeClick
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
                 PostActionItem(
                     icon = Lucide.MessageCircle,
                     count = moment.commentsCount,
                     contentDescription = "评论",
                     onClick = onCommentClick
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
                 PostActionItem(
                     icon = if (moment.isCollected) Icons.Filled.Star else Lucide.Star,
                     contentDescription = "收藏",
                     isActive = moment.isCollected,
-                    activeColor = Color(0xFFFFC107),
+                    activeColor = MaterialTheme.colorScheme.tertiary,
                     onClick = onBookmarkClick,
                     showCount = false
                 )
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
         HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     }
 }
 
 @Composable
 fun ImageGrid(images: List<Attachment>) {
-    val context = LocalContext.current
     val imageCount = images.size
     
     // 根据图片数量决定布局
@@ -171,7 +171,7 @@ fun ImageGrid(images: List<Attachment>) {
                 modifier = Modifier
                     .fillMaxWidth(0.7f) // 单张图不占满全宽，更有质感
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(Dimens.CornerRadiusMedium))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentScale = ContentScale.Crop
             )
@@ -193,7 +193,7 @@ fun ImageGrid(images: List<Attachment>) {
                                     modifier = Modifier
                                         .weight(1f)
                                         .aspectRatio(1f)
-                                        .clip(RoundedCornerShape(4.dp))
+                                        .clip(RoundedCornerShape(Dimens.CornerRadiusSmall))
                                         .background(MaterialTheme.colorScheme.surfaceVariant),
                                     contentScale = ContentScale.Crop
                                 )
@@ -214,7 +214,7 @@ fun VoicePlayerTag(url: String, duration: Int) {
     // ... MediaPlayer 逻辑保持不变 ...
     
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(Dimens.CornerRadiusLarge),
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
         modifier = Modifier
             .height(44.dp)
@@ -231,7 +231,7 @@ fun VoicePlayerTag(url: String, duration: Int) {
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(18.dp)
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
             Text("${duration}\"", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.weight(1f))
             // 静态声波模拟
@@ -277,14 +277,13 @@ private fun PostActionItem(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = tint,
-            modifier = Modifier.size(18.dp).scale(scale)
+            modifier = Modifier.size(Dimens.IconSizeSmall).scale(scale)
         )
         if (showCount && count > 0) {
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = count.toString(),
                 style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = 12.sp,
                     fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
                 ),
                 color = tint

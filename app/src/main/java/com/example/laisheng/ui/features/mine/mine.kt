@@ -26,14 +26,17 @@ import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import com.composables.icons.lucide.*
-import com.example.laisheng.data.NetworkModule
+import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.FollowCounts
 import com.example.laisheng.data.model.User
-import com.example.laisheng.ui.composes.PostCard
+import com.example.laisheng.ui.components.PostCard
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.materials.HazeMaterials
 import dev.chrisbanes.haze.hazeSource
+
+import com.example.laisheng.ui.MainViewModel
+import com.example.laisheng.ui.theme.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,11 +48,15 @@ fun MineScreen(
     onEditClick: (String, String, String, String?, String?) -> Unit,
     onMomentClick: (String) -> Unit,
     onSettingsClick: () -> Unit = {},
-    viewModel: MineViewModel = viewModel()
+    viewModel: MineViewModel = viewModel(),
+    mainViewModel: MainViewModel // Add MainViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
+    
+    // Theme state
+    val themeMode by mainViewModel.themeMode.collectAsState()
 
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) viewModel.loadData(userId)
@@ -153,19 +160,40 @@ fun MineScreen(
         }
 
         // 顶栏：样式完全对齐“探索”页面，且具有上下一致的模糊感
-        MineTopBar(hazeState, onSettingsClick)
+        MineTopBar(
+            hazeState = hazeState, 
+            onSettingsClick = onSettingsClick,
+            themeMode = themeMode,
+            onThemeToggle = {
+                // Toggle between Light (1) and Dark (2). Default/System(0) treats as auto. 
+                // Simple logic: if currently Dark (2) then Light(1), else Dark(2).
+                // If System (0), we check system state but simple toggle forces manual mode. 
+                // Let's say: if mode is 2 -> 1, else -> 2.
+                val newMode = if (themeMode == 2) 1 else 2
+                mainViewModel.setThemeMode(newMode)
+            }
+        )
     }
 }
 
 @Composable
-fun MineTopBar(hazeState: HazeState, onSettingsClick: () -> Unit) {
-    var isDarkMode by remember { mutableStateOf(false) }
+fun MineTopBar(
+    hazeState: HazeState, 
+    onSettingsClick: () -> Unit,
+    themeMode: Int,
+    onThemeToggle: () -> Unit
+) {
+    // ... icon logic ...
     
+    val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    val contentColor = MaterialTheme.colorScheme.onSurface
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin())
-            .background(Color.White.copy(alpha = 0.8f)) // 与 BottomNavigation 和 TopBar 保持相同的透明度
+            .background(backgroundColor) 
     ) {
         Box(
             modifier = Modifier
@@ -175,25 +203,26 @@ fun MineTopBar(hazeState: HazeState, onSettingsClick: () -> Unit) {
                 .padding(horizontal = 12.dp),
             contentAlignment = Alignment.CenterEnd
         ) {
-            // 设置和夜间按钮样式：去掉了圆底，直接使用标准 IconButton 样式与探索页面对齐
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { isDarkMode = !isDarkMode }) {
+                IconButton(onClick = onThemeToggle) {
                     Icon(
-                        imageVector = if (isDarkMode) Lucide.Sun else Lucide.Moon, 
-                        contentDescription = null, 
-                        modifier = Modifier.size(22.dp)
+                        imageVector = if (themeMode == 2) Lucide.Sun else Lucide.Moon, 
+                        contentDescription = "切换主题", 
+                        modifier = Modifier.size(22.dp),
+                        tint = contentColor
                     )
                 }
                 IconButton(onClick = onSettingsClick) {
                     Icon(
                         imageVector = Lucide.Settings, 
                         contentDescription = null, 
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(22.dp),
+                        tint = contentColor
                     )
                 }
             }
         }
-        HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
+        HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
     }
 }
 
@@ -209,7 +238,7 @@ fun ProfileHeader(
     
     Column(modifier = Modifier.fillMaxWidth()) {
         // 封面高度调整为 280.dp
-        Box(modifier = Modifier.fillMaxWidth().height(280.dp)) {
+        Box(modifier = Modifier.fillMaxWidth().height(Dimens.BannerHeight)) {
             AsyncImage(
                 model = NetworkModule.formatUrl(user.bgImage) ?: "https://picsum.photos/1000/500",
                 contentDescription = null,
@@ -219,16 +248,21 @@ fun ProfileHeader(
             Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.3f)))))
         }
 
-        Box(modifier = Modifier.padding(horizontal = 20.dp)) {
+        Box(modifier = Modifier.padding(horizontal = Dimens.PaddingLarge)) {
             Column {
                 Spacer(modifier = Modifier.height(55.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = user.nickname, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold, fontSize = 22.sp), modifier = Modifier.weight(1f))
+                    Text(
+                        text = user.nickname, 
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold, fontSize = 22.sp), 
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     OutlinedButton(
                         onClick = onEditClick, 
-                        shape = RoundedCornerShape(12.dp), 
+                        shape = RoundedCornerShape(Dimens.CornerRadiusMedium), 
                         modifier = Modifier.height(36.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp)
+                        contentPadding = PaddingValues(horizontal = Dimens.PaddingMedium)
                     ) {
                         Text("编辑资料", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
@@ -259,7 +293,7 @@ fun ProfileHeader(
 
             // 头像位置优化
             Surface(
-                modifier = Modifier.offset(y = (-50).dp).size(100.dp).border(4.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                modifier = Modifier.offset(y = (-50).dp).size(Dimens.AvatarSizeProfile).border(4.dp, MaterialTheme.colorScheme.surface, CircleShape),
                 shape = CircleShape,
                 tonalElevation = 4.dp
             ) {
@@ -277,7 +311,7 @@ fun ProfileHeader(
 @Composable
 fun StatItem(count: Int, label: String, onClick: () -> Unit) {
     Column(modifier = Modifier.clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, onClick = onClick)) {
-        Text(text = count.toString(), fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+        Text(text = count.toString(), fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
         Text(text = label, color = MaterialTheme.colorScheme.outline, fontSize = 12.sp)
     }
 }

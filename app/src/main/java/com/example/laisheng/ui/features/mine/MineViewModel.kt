@@ -2,7 +2,7 @@ package com.example.laisheng.ui.features.mine
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.laisheng.data.NetworkModule
+import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.FollowCounts
 import com.example.laisheng.data.model.Moment
 import com.example.laisheng.data.model.User

@@ -43,6 +43,8 @@ import coil.request.ImageRequest
 import com.composables.icons.lucide.*
 import java.io.File
 
+import com.example.laisheng.ui.theme.Dimens
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostScreen(
@@ -103,7 +105,7 @@ fun PostScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .imePadding() // 核心：让内容随输入法推起
-                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .padding(horizontal = Dimens.PaddingLarge, vertical = Dimens.PaddingMedium)
         ) {
             // 顶部导航
             Row(

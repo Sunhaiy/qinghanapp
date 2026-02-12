@@ -1,4 +1,4 @@
-package com.example.laisheng.navigation
+package com.example.laisheng.ui.navigation
 
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.composables.icons.lucide.*

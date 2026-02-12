@@ -1,4 +1,4 @@
-package com.example.laisheng.data
+package com.example.laisheng.data.remote
 
 import com.example.laisheng.data.remote.ApiService
 import retrofit2.Retrofit

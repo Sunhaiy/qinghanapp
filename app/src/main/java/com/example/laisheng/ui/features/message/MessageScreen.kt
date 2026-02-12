@@ -23,8 +23,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
-import com.example.laisheng.data.NetworkModule
+import com.example.laisheng.data.remote.SocketManager
+import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.ChatListItem
+import com.example.laisheng.ui.theme.Dimens
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
@@ -114,10 +116,10 @@ fun ChatItem(
         color = Color.Transparent
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(Dimens.PaddingMedium),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(modifier = Modifier.size(50.dp)) {
+            Box(modifier = Modifier.size(Dimens.AvatarSizeList)) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(NetworkModule.formatUrl(item.avatar))
@@ -134,14 +136,14 @@ fun ChatItem(
                     Box(
                         modifier = Modifier
                             .size(12.dp)
-                            .background(Color.Red, CircleShape)
+                            .background(MaterialTheme.colorScheme.error, CircleShape)
                             .align(Alignment.TopEnd)
-                            .border(2.dp, Color.White, CircleShape)
+                            .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Dimens.PaddingMedium))
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(
@@ -152,19 +154,20 @@ fun ChatItem(
                     Text(
                         text = item.nickname ?: "未知用户",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = formatChatTime(item.lastTime),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = item.lastMessage ?: "",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

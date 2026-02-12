@@ -26,8 +26,10 @@ import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.CachePolicy
 import coil.request.ImageRequest
-import com.example.laisheng.data.NetworkModule
+import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.ChatMessage
+
+import com.example.laisheng.ui.theme.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,7 +78,7 @@ fun ChatDetailScreen(
         bottomBar = {
             Surface(tonalElevation = 8.dp, modifier = Modifier.navigationBarsPadding()) {
                 Row(
-                    modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                    modifier = Modifier.padding(Dimens.PaddingSmall).fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextField(
@@ -106,7 +108,7 @@ fun ChatDetailScreen(
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
+                .background(MaterialTheme.colorScheme.surfaceContainerLowest) // Use theme color instead of hardcoded grey
         ) {
             when (val state = uiState) {
                 is ChatDetailUiState.Loading -> {
@@ -116,8 +118,8 @@ fun ChatDetailScreen(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        contentPadding = PaddingValues(Dimens.PaddingMedium),
+                        verticalArrangement = Arrangement.spacedBy(Dimens.PaddingMedium)
                     ) {
                         items(state.messages) { message ->
                             MessageBubble(
@@ -130,7 +132,7 @@ fun ChatDetailScreen(
                     }
                 }
                 is ChatDetailUiState.Error -> {
-                    Text(state.message, color = Color.Red, modifier = Modifier.align(Alignment.Center))
+                    Text(state.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
                 }
             }
         }
@@ -162,23 +164,23 @@ fun MessageBubble(message: ChatMessage, isMe: Boolean, otherAvatar: String?, myA
                 model = avatarRequest,
                 contentDescription = null,
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(40.dp) // Maintain 40dp or use AvatarSizeMedium (42) / Small (32). 40 is close to 42.
                     .clip(CircleShape)
-                    .background(Color.LightGray.copy(alpha = 0.3f)), // 增加淡灰色占位背景
+                    .background(MaterialTheme.colorScheme.surfaceVariant), // theme color
                 contentScale = ContentScale.Crop
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
         }
 
         Surface(
             shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (isMe) 16.dp else 2.dp,
-                bottomEnd = if (isMe) 2.dp else 16.dp
+                topStart = Dimens.PaddingMedium,
+                topEnd = Dimens.PaddingMedium,
+                bottomStart = if (isMe) Dimens.PaddingMedium else 2.dp,
+                bottomEnd = if (isMe) 2.dp else Dimens.PaddingMedium
             ),
-            color = if (isMe) Color(0xFF95EC69) else Color.White,
-            contentColor = Color.Black
+            color = if (isMe) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+            contentColor = if (isMe) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
         ) {
             Text(
                 text = message.content.text ?: "",
@@ -188,14 +190,14 @@ fun MessageBubble(message: ChatMessage, isMe: Boolean, otherAvatar: String?, myA
         }
 
         if (isMe) {
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
             AsyncImage(
                 model = avatarRequest,
                 contentDescription = null,
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color.LightGray.copy(alpha = 0.3f)), // 增加淡灰色占位背景
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentScale = ContentScale.Crop
             )
         }

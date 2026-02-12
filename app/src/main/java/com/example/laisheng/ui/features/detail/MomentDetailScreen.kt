@@ -27,9 +27,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
-import com.example.laisheng.data.NetworkModule
+import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.Comment
-import com.example.laisheng.ui.composes.PostCard
+import com.example.laisheng.ui.components.PostCard
+
+import com.example.laisheng.ui.theme.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -66,7 +68,7 @@ fun MomentDetailScreen(
             ) {
                 Row(
                     modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(horizontal = Dimens.PaddingMedium, vertical = Dimens.PaddingSmall)
                         .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -117,11 +119,11 @@ fun MomentDetailScreen(
                         }
 
                         item {
-                            HorizontalDivider(thickness = 8.dp, color = MaterialTheme.colorScheme.surfaceVariant)
+                            HorizontalDivider(thickness = Dimens.PaddingSmall, color = MaterialTheme.colorScheme.surfaceVariant)
                             Text(
                                 text = "评论 (${state.comments.size})",
                                 style = MaterialTheme.typography.titleSmall,
-                                modifier = Modifier.padding(16.dp)
+                                modifier = Modifier.padding(Dimens.PaddingMedium)
                             )
                         }
 
@@ -132,7 +134,7 @@ fun MomentDetailScreen(
                         if (state.comments.isEmpty()) {
                             item {
                                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                    Text("抢个沙发吧~", color = Color.Gray)
+                                    Text("抢个沙发吧~", color = MaterialTheme.colorScheme.outline)
                                 }
                             }
                         }
@@ -140,7 +142,7 @@ fun MomentDetailScreen(
                 }
                 is MomentDetailUiState.Error -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(state.message, color = Color.Red)
+                        Text(state.message, color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -153,7 +155,7 @@ fun CommentItem(comment: Comment) {
     val context = LocalContext.current
     Row(
         modifier = Modifier
-            .padding(16.dp)
+            .padding(Dimens.PaddingMedium)
             .fillMaxWidth()
     ) {
         AsyncImage(
@@ -163,32 +165,34 @@ fun CommentItem(comment: Comment) {
                 .build(),
             contentDescription = null,
             modifier = Modifier
-                .size(36.dp)
+                .size(36.dp) // 36dp is essentially AvatarSizeSmall (32) or Medium (42). Let's keep 36 or move to 32/40. 36 is fine as specific. Or use AvatarSizeSmall.
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentScale = ContentScale.Crop
         )
         
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(Dimens.PaddingMedium)) // Was 12.dp. 16dp is PaddingMedium.
         
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = comment.nickname ?: "未知用户",
                     style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
                 Text(
                     text = if (comment.createdAt.contains("T")) comment.createdAt.substringBefore("T") else comment.createdAt,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = comment.content,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }

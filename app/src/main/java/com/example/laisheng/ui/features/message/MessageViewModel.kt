@@ -2,7 +2,7 @@ package com.example.laisheng.ui.features.message
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.laisheng.data.NetworkModule
+import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.ChatListItem
 import com.example.laisheng.data.remote.SocketManager
 import com.example.laisheng.data.repository.MomentRepository

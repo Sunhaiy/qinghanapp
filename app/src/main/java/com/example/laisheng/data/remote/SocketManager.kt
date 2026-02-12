@@ -1,7 +1,7 @@
 package com.example.laisheng.data.remote
 
 import android.util.Log
-import com.example.laisheng.data.NetworkModule
+import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.ChatMessage
 import com.google.gson.Gson
 import io.socket.client.IO
