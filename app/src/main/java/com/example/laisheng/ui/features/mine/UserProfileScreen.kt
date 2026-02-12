@@ -297,7 +297,8 @@ fun ProfileHeaderSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .offset(y = (-40).dp), // Move up to align with avatar bottom area
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                      IconButton(
                         onClick = onChatClick,
