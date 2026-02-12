@@ -154,52 +154,76 @@ fun MessageBubble(message: ChatMessage, isMe: Boolean, otherAvatar: String?, myA
             .build()
     }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
-        verticalAlignment = Alignment.Top
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp), // Reduce vertical padding for tighter group
+        horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
     ) {
-        if (!isMe) {
-            AsyncImage(
-                model = avatarRequest,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(40.dp) // Maintain 40dp or use AvatarSizeMedium (42) / Small (32). 40 is close to 42.
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant), // theme color
-                contentScale = ContentScale.Crop
-            )
-            Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
-        }
+        // Timestamp (simplified logic: show for every message for now, or could use logic to show every 5 mins)
+        // For now, let's just show it if it's long enough ago or simplified. 
+        // Actually, let's add a small timestamp below the bubble or next to it? 
+        // Let's just keep it simple but refine the bubble.
 
-        Surface(
-            shape = RoundedCornerShape(
-                topStart = Dimens.PaddingMedium,
-                topEnd = Dimens.PaddingMedium,
-                bottomStart = if (isMe) Dimens.PaddingMedium else 2.dp,
-                bottomEnd = if (isMe) 2.dp else Dimens.PaddingMedium
-            ),
-            color = if (isMe) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
-            contentColor = if (isMe) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+        Row(
+            horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
+            verticalAlignment = Alignment.Top
         ) {
-            Text(
-                text = message.content.text ?: "",
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                fontSize = 16.sp
-            )
-        }
+            if (!isMe) {
+                AsyncImage(
+                    model = avatarRequest,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
+            }
 
-        if (isMe) {
-            Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
-            AsyncImage(
-                model = avatarRequest,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentScale = ContentScale.Crop
-            )
+            Column(horizontalAlignment = if (isMe) Alignment.End else Alignment.Start) {
+                Surface(
+                    shape = RoundedCornerShape(
+                        topStart = 18.dp,
+                        topEnd = 18.dp,
+                        bottomStart = if (isMe) 18.dp else 4.dp,
+                        bottomEnd = if (isMe) 4.dp else 18.dp
+                    ),
+                    color = if (isMe) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = if (isMe) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                    shadowElevation = 1.dp
+                ) {
+                    Text(
+                        text = message.content.text ?: "",
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                            .widthIn(max = 280.dp), // Limit max width
+                        fontSize = 16.sp,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+                // Optional: Show time below bubble
+                // Text(
+                //     text = formatTime(message.createdAt), 
+                //     style = MaterialTheme.typography.labelSmall, 
+                //     color = MaterialTheme.colorScheme.outline,
+                //     modifier = Modifier.padding(top = 2.dp)
+                // )
+            }
+
+            if (isMe) {
+                Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
+                AsyncImage(
+                    model = avatarRequest,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
     }
 }

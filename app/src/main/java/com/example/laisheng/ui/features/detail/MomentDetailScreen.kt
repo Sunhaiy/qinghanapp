@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -155,47 +156,62 @@ fun MomentDetailScreen(
 @Composable
 fun CommentItem(comment: Comment) {
     val context = LocalContext.current
-    Row(
-        modifier = Modifier
-            .padding(Dimens.PaddingMedium)
-            .fillMaxWidth()
-    ) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(NetworkModule.formatUrl(comment.avatar))
-                .decoderFactory(SvgDecoder.Factory())
-                .build(),
-            contentDescription = null,
+    
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
             modifier = Modifier
-                .size(36.dp) // 36dp is essentially AvatarSizeSmall (32) or Medium (42). Let's keep 36 or move to 32/40. 36 is fine as specific. Or use AvatarSizeSmall.
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentScale = ContentScale.Crop
-        )
-        
-        Spacer(modifier = Modifier.width(Dimens.PaddingMedium)) // Was 12.dp. 16dp is PaddingMedium.
-        
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+                .fillMaxWidth()
+                .clickable { /* Handle comment click */ }
+                .padding(horizontal = Dimens.PaddingMedium, vertical = Dimens.PaddingSmall)
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(NetworkModule.formatUrl(comment.avatar))
+                    .decoderFactory(SvgDecoder.Factory())
+                    .build(),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentScale = ContentScale.Crop
+            )
+            
+            Spacer(modifier = Modifier.width(Dimens.PaddingMedium))
+            
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = comment.nickname ?: "未知用户",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    )
+                    Text(
+                        text = if (comment.createdAt.contains("T")) comment.createdAt.substringBefore("T") else comment.createdAt,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(2.dp))
+                
                 Text(
-                    text = comment.nickname ?: "未知用户",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
-                Text(
-                    text = if (comment.createdAt.contains("T")) comment.createdAt.substringBefore("T") else comment.createdAt,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = comment.content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = 20.sp
                 )
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = comment.content,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
         }
+        HorizontalDivider(
+            modifier = Modifier.padding(start = 60.dp), // Align divider with text start
+            thickness = 0.5.dp, 
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        )
     }
 }

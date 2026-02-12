@@ -129,7 +129,13 @@ fun PostCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(formatTime(moment.createdAt), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(formatTime(moment.createdAt), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                moment.ipLocation?.let { ip ->
+                    Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
+                    Text("· $ip", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PostActionItem(
                     icon = if (moment.isLiked) Icons.Filled.Favorite else Lucide.Heart,

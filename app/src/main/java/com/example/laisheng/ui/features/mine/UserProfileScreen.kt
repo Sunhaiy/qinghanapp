@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,6 +34,10 @@ import com.example.laisheng.ui.components.PostCard
 import com.example.laisheng.ui.theme.Dimens
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.MessageCircle
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.materials.HazeMaterials
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,6 +51,7 @@ fun UserProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val hazeState = remember { HazeState() }
 
     LaunchedEffect(userId) {
         viewModel.loadProfile(userId, currentUserId)
@@ -56,11 +62,17 @@ fun UserProfileScreen(
             TopAppBar(
                 title = { },
                 navigationIcon = {
-                    IconButton(
-                        onClick = onBack,
-                        colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .hazeEffect(state = hazeState, style = HazeMaterials.thin())
+                            // 使用极低透明度或透明，让毛玻璃效果为主
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.2f))  
+                            .clickable(onClick = onBack),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -78,7 +90,7 @@ fun UserProfileScreen(
                     val user = state.user
                     
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().hazeSource(state = hazeState),
                         contentPadding = PaddingValues(bottom = Dimens.PaddingLarge)
                     ) {
                         item {
@@ -229,6 +241,20 @@ fun ProfileHeaderSection(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
+            }
+
+            // IP Location
+            user.ipLocation?.let { ip ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                     Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.outline)
+                     Spacer(modifier = Modifier.width(4.dp))
+                     Text(
+                        text = "IP属地: $ip",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
                 Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
             }
             

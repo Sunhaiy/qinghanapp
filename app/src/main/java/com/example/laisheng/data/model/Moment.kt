@@ -19,7 +19,9 @@ data class Moment(
     val handle: String?,
     val avatar: String?,
     @SerializedName("is_liked") var isLiked: Boolean = false,
-    @SerializedName("is_collected") var isCollected: Boolean = false
+    @SerializedName("is_collected") var isCollected: Boolean = false,
+    @SerializedName("ip_location") val ipLocation: String? = null,
+    @SerializedName("user_ip_location") val userIpLocation: String? = null
 )
 
 data class MomentContent(
