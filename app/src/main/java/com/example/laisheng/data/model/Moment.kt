@@ -21,7 +21,9 @@ data class Moment(
     @SerializedName("is_liked") var isLiked: Boolean = false,
     @SerializedName("is_collected") var isCollected: Boolean = false,
     @SerializedName("ip_location") val ipLocation: String? = null,
-    @SerializedName("user_ip_location") val userIpLocation: String? = null
+    @SerializedName("user_ip_location") val userIpLocation: String? = null,
+    @SerializedName("collection_id") val collectionId: String? = null,
+    @SerializedName("folder_id") val folderId: String? = null
 )
 
 data class MomentContent(

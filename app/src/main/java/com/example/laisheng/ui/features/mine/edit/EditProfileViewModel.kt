@@ -31,11 +31,12 @@ class EditProfileViewModel : ViewModel() {
     fun updateProfile(
         userId: String,
         nickname: String,
+        handle: String, // Added handle
         bio: String,
         newAvatarUri: Uri?,
         newBgUri: Uri?,
-        currentAvatar: String?, // 传入当前头像作为兜底
-        currentBg: String?,     // 传入当前背景作为兜底
+        currentAvatar: String?,
+        currentBg: String?,
         context: Context
     ) {
         viewModelScope.launch {
@@ -43,6 +44,7 @@ class EditProfileViewModel : ViewModel() {
             try {
                 val updates = mutableMapOf<String, String?>()
                 updates["nickname"] = nickname
+                updates["handle"] = handle // Update handle
                 updates["bio"] = bio
                 
                 // 默认使用当前已有的 URL，防止被后端清空

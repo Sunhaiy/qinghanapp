@@ -161,10 +161,10 @@ fun Laisheng(mainViewModel: MainViewModel) {
                             userId = userId, 
                             paddingValues = paddingValues, 
                             onFollowClick = { uid, title, type -> navController.navigate("follows/$uid/$title/$type") }, 
-                            onEditClick = { nick, handle, bio, av, bg ->
+                            onEditClick = { nick, handle, bio, av, bg, lastUpdate ->
                                 val eN = Uri.encode(nick); val eH = Uri.encode(handle)
-                                val eB = Uri.encode(bio ?: ""); val eA = Uri.encode(av ?: ""); val eG = Uri.encode(bg ?: "")
-                                navController.navigate("edit_profile/$userId/$eH/$eN/$eB?avatar=$eA&bg=$eG")
+                                val eB = Uri.encode(bio ?: ""); val eA = Uri.encode(av ?: ""); val eG = Uri.encode(bg ?: ""); val eL = Uri.encode(lastUpdate ?: "")
+                                navController.navigate("edit_profile/$userId/$eH/$eN/$eB?avatar=$eA&bg=$eG&lastUpdate=$eL")
                             }, 
                             onMomentClick = { id -> navController.navigate("moment_detail/$id") },
                             onSettingsClick = { 
@@ -210,13 +210,14 @@ fun Laisheng(mainViewModel: MainViewModel) {
                             onUserClick = { targetUid -> navController.navigate("user_profile/$targetUid") }
                         )
                     }
-                    composable("edit_profile/{userId}/{handle}/{nickname}/{bio}?avatar={avatar}&bg={bg}", listOf(
+                    composable("edit_profile/{userId}/{handle}/{nickname}/{bio}?avatar={avatar}&bg={bg}&lastUpdate={lastUpdate}", listOf(
                         navArgument("userId") { type = NavType.StringType },
                         navArgument("handle") { type = NavType.StringType },
                         navArgument("nickname") { type = NavType.StringType },
                         navArgument("bio") { type = NavType.StringType },
                         navArgument("avatar") { type = NavType.StringType; nullable = true },
-                        navArgument("bg") { type = NavType.StringType; nullable = true }
+                        navArgument("bg") { type = NavType.StringType; nullable = true },
+                        navArgument("lastUpdate") { type = NavType.StringType; nullable = true }
                     )) { backStackEntry ->
                         EditProfileScreen(
                             userId = backStackEntry.arguments?.getString("userId") ?: "",
@@ -225,6 +226,7 @@ fun Laisheng(mainViewModel: MainViewModel) {
                             initialBio = Uri.decode(backStackEntry.arguments?.getString("bio") ?: ""),
                             initialAvatar = Uri.decode(backStackEntry.arguments?.getString("avatar") ?: ""),
                             initialBgImage = Uri.decode(backStackEntry.arguments?.getString("bg") ?: ""),
+                            handleLastUpdatedAt = Uri.decode(backStackEntry.arguments?.getString("lastUpdate") ?: ""),
                             onBack = { navController.popBackStack() },
                             onSaveSuccess = { navController.popBackStack() }
                         )

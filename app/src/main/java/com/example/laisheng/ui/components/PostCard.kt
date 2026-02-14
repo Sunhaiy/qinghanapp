@@ -6,6 +6,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,6 +37,7 @@ import com.example.laisheng.data.model.Attachment
 import com.example.laisheng.data.model.Moment
 import com.example.laisheng.ui.theme.Dimens
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PostCard(
     moment: Moment,
@@ -44,7 +47,8 @@ fun PostCard(
     onLikeClick: () -> Unit = {},
     onCommentClick: () -> Unit = {},
     onBookmarkClick: () -> Unit = {},
-    onUserClick: (String) -> Unit = {}
+    onUserClick: (String) -> Unit = {},
+    onLongClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val nickname = moment.nickname ?: "未知用户"
@@ -67,8 +71,10 @@ fun PostCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onCardClick)
-            .clickable(onClick = onCardClick)
+            .combinedClickable(
+                onClick = onCardClick,
+                onLongClick = onLongClick
+            )
             .padding(all = Dimens.PaddingMedium) // Use consistent padding (e.g. 16.dp) for top/bottom/left/right
     ) {
         // 1. 用户信息

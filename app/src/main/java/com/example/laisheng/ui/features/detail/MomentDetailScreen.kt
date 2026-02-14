@@ -31,6 +31,7 @@ import coil.request.ImageRequest
 import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.Comment
 import com.example.laisheng.ui.components.PostCard
+import com.example.laisheng.ui.features.mine.MoveToFolderDialog
 
 import com.example.laisheng.ui.theme.Dimens
 
@@ -46,10 +47,29 @@ fun MomentDetailScreen(
     viewModel: MomentDetailViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val folders by viewModel.folders.collectAsState()
     var commentText by remember { mutableStateOf("") }
+    var showMoveDialog by remember { mutableStateOf(false) }
+    
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(momentId) {
         viewModel.loadMomentDetail(momentId, userId)
+        viewModel.loadFolders(userId)
+    }
+
+    // Snackbar event handling
+    LaunchedEffect(viewModel) {
+        viewModel.snackbarEvent.collect { event ->
+            val result = snackbarHostState.showSnackbar(
+                message = event.message,
+                actionLabel = event.actionLabel,
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                event.onAction?.invoke()
+            }
+        }
     }
 
     Scaffold(
@@ -95,7 +115,9 @@ fun MomentDetailScreen(
                     }
                 }
             }
-        }
+
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             when (val state = uiState) {
@@ -116,7 +138,11 @@ fun MomentDetailScreen(
                                     ),
                                     onUserClick = { onUserClick(state.moment.userId) }, // Wire up
                                     onLikeClick = { viewModel.onLikeClick(userId, state.moment.id) },
-                                    onBookmarkClick = { viewModel.onBookmarkClick(userId, state.moment.id) }
+                                    onBookmarkClick = { 
+                                        viewModel.onBookmarkClick(userId, state.moment.id) {
+                                            showMoveDialog = true
+                                        }
+                                    }
                                 )
                             }
                         }
@@ -142,16 +168,28 @@ fun MomentDetailScreen(
                             }
                         }
                     }
+
+                if (showMoveDialog) {
+                     com.example.laisheng.ui.features.mine.MoveToFolderDialog(
+                        folders = folders,
+                        onDismiss = { showMoveDialog = false },
+                        onSelectFolder = { folderId: String? ->
+                            viewModel.confirmCollection(userId, state.moment.id, folderId)
+                            showMoveDialog = false
+                        }
+                    )
                 }
-                is MomentDetailUiState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(state.message, color = MaterialTheme.colorScheme.error)
-                    }
+            }
+            is MomentDetailUiState.Error -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(state.message, color = MaterialTheme.colorScheme.error)
+                }
+            }
                 }
             }
         }
     }
-}
+
 
 @Composable
 fun CommentItem(comment: Comment) {

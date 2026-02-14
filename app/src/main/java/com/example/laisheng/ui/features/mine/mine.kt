@@ -1,6 +1,7 @@
 package com.example.laisheng.ui.features.mine
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,6 +10,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +31,7 @@ import com.composables.icons.lucide.*
 import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.FollowCounts
 import com.example.laisheng.data.model.User
+import com.example.laisheng.data.model.CollectionFolder
 import com.example.laisheng.ui.components.PostCard
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
@@ -38,14 +41,16 @@ import dev.chrisbanes.haze.hazeSource
 import com.example.laisheng.ui.MainViewModel
 import com.example.laisheng.ui.theme.Dimens
 
-@OptIn(ExperimentalMaterial3Api::class)
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
 @Composable
 fun MineScreen(
     hazeState: HazeState,
     userId: String,
     paddingValues: PaddingValues,
     onFollowClick: (String, String, String) -> Unit,
-    onEditClick: (String, String, String, String?, String?) -> Unit,
+    onEditClick: (String, String, String, String?, String?, String?) -> Unit,
     onMomentClick: (String) -> Unit,
     onSettingsClick: () -> Unit = {},
     viewModel: MineViewModel = viewModel(),
@@ -57,6 +62,12 @@ fun MineScreen(
     
     // Theme state
     val themeMode by mainViewModel.themeMode.collectAsState()
+    
+    // Folder state
+    val selectedFolderId by viewModel.selectedFolderId.collectAsState()
+    var showCreateFolderDialog by remember { mutableStateOf(false) }
+    var showMoveDialog by remember { mutableStateOf(false) }
+    var longPressedMomentId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) viewModel.loadData(userId)
@@ -86,24 +97,46 @@ fun MineScreen(
                                 mutualCount = state.mutualFriends.size,
                                 onStatClick = { type, title -> onFollowClick(userId, title, type) },
                                 onEditClick = {
-                                    onEditClick(state.user.nickname, state.user.handle, state.user.bio ?: "", state.user.avatar, state.user.bgImage)
+                                    onEditClick(state.user.nickname, state.user.handle, state.user.bio ?: "", state.user.avatar, state.user.bgImage, state.user.handleLastUpdatedAt)
                                 }
                             )
                         }
 
-                        stickyHeader {
+                        item {
                             Surface(
-                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                                modifier = Modifier.fillMaxWidth()
+                                color = MaterialTheme.colorScheme.surface,
+                                shadowElevation = 0.dp, // Remove shadow for cleaner look
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp) // Add spacing
                             ) {
-                                SecondaryTabRow(
+                                TabRow(
                                     selectedTabIndex = selectedTab.ordinal,
                                     containerColor = Color.Transparent,
-                                    divider = { HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)) }
+                                    contentColor = MaterialTheme.colorScheme.primary,
+                                    divider = {},
+                                    indicator = { tabPositions ->
+                                        if (selectedTab.ordinal < tabPositions.size) {
+                                            val currentTab = tabPositions[selectedTab.ordinal]
+                                            val indicatorWidth = 16.dp
+                                            
+                                            // 居中短横条指示器
+                                            Box(
+                                                Modifier
+                                                    .tabIndicatorOffset(currentTab)
+                                                    .wrapContentSize(Alignment.BottomCenter)
+                                                    .width(indicatorWidth)
+                                                    .height(3.dp)
+                                                    .background(
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                        shape = RoundedCornerShape(3.dp)
+                                                    )
+                                            )
+                                        }
+                                    }
                                 ) {
                                     MineTab.entries.forEach { tab ->
+                                        val isSelected = selectedTab == tab
                                         Tab(
-                                            selected = selectedTab == tab,
+                                            selected = isSelected,
                                             onClick = { viewModel.selectTab(tab) },
                                             text = {
                                                 Text(
@@ -112,13 +145,28 @@ fun MineScreen(
                                                         MineTab.LIKED -> "赞过"
                                                         MineTab.COLLECTED -> "收藏"
                                                     },
-                                                    fontSize = 14.sp,
-                                                    fontWeight = if (selectedTab == tab) FontWeight.ExtraBold else FontWeight.Medium
+                                                    style = if (isSelected) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
-                                            }
+                                            },
+                                            selectedContentColor = MaterialTheme.colorScheme.primary,
+                                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
+                            }
+                        }
+
+                        if (selectedTab == MineTab.COLLECTED) {
+                            item {
+                                FolderList(
+                                    folders = (state as? MineUiState.Success)?.folders ?: emptyList(),
+                                    selectedFolderId = selectedFolderId,
+                                    onFolderClick = { viewModel.selectFolder(it) },
+                                    onCreateClick = { showCreateFolderDialog = true },
+                                    onDeleteFolder = { viewModel.deleteFolder(it) }
+                                )
                             }
                         }
 
@@ -130,11 +178,32 @@ fun MineScreen(
 
                         if (currentList.isEmpty()) {
                             item {
-                                Box(modifier = Modifier.fillParentMaxHeight(0.4f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillParentMaxHeight(0.5f)
+                                        .fillMaxWidth()
+                                        .padding(top = 48.dp), 
+                                    contentAlignment = Alignment.TopCenter
+                                ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Icon(Lucide.Inbox, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text("暂无内容", color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                                        Icon(
+                                            imageVector = Lucide.Inbox, 
+                                            contentDescription = null, 
+                                            modifier = Modifier.size(64.dp), 
+                                            tint = MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Text(
+                                            text = "这里什么都没有", 
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "去发点动态或者关注有趣的人吧", 
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
                                     }
                                 }
                             }
@@ -145,7 +214,13 @@ fun MineScreen(
                                     onCardClick = { onMomentClick(moment.id) },
                                     onLikeClick = { viewModel.toggleLike(moment.id, userId) },
                                     onBookmarkClick = { viewModel.toggleCollect(moment.id, userId) },
-                                    onCommentClick = { onMomentClick(moment.id) }
+                                    onCommentClick = { onMomentClick(moment.id) },
+                                    onLongClick = {
+                                        if (selectedTab == MineTab.COLLECTED) {
+                                            longPressedMomentId = moment.id
+                                            showMoveDialog = true
+                                        }
+                                    }
                                 )
                             }
                         }
@@ -173,6 +248,28 @@ fun MineScreen(
                 mainViewModel.setThemeMode(newMode)
             }
         )
+        
+        if (showCreateFolderDialog) {
+            CreateFolderDialog(
+                onDismiss = { showCreateFolderDialog = false },
+                onConfirm = { name -> 
+                    viewModel.createFolder(name)
+                    showCreateFolderDialog = false
+                }
+            )
+        }
+
+        if (showMoveDialog && longPressedMomentId != null) {
+            MoveToFolderDialog(
+                folders = (uiState as? MineUiState.Success)?.folders ?: emptyList(),
+                onDismiss = { showMoveDialog = false; longPressedMomentId = null },
+                onSelectFolder = { folderId ->
+                    viewModel.moveCollectionToFolder(longPressedMomentId!!, userId, folderId)
+                    showMoveDialog = false
+                    longPressedMomentId = null
+                }
+            )
+        }
     }
 }
 
@@ -237,71 +334,118 @@ fun ProfileHeader(
     val context = LocalContext.current
     
     Column(modifier = Modifier.fillMaxWidth()) {
-        // 封面高度调整为 280.dp
-        Box(modifier = Modifier.fillMaxWidth().height(Dimens.BannerHeight)) {
+        // 封面高度调整为 240.dp (稍微减小，更紧凑)
+        Box(modifier = Modifier.fillMaxWidth().height(240.dp)) {
             AsyncImage(
                 model = NetworkModule.formatUrl(user.bgImage) ?: "https://picsum.photos/1000/500",
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.3f)))))
+            // 渐变遮罩，增强文字可读性
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)),
+                            startY = 0f,
+                            endY = Float.POSITIVE_INFINITY
+                        )
+                    )
+            )
         }
 
-        Box(modifier = Modifier.padding(horizontal = Dimens.PaddingLarge)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset(y = (-40).dp)
+                .padding(horizontal = 20.dp)
+        ) {
             Column {
-                Spacer(modifier = Modifier.height(55.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = user.nickname, 
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold, fontSize = 22.sp), 
-                        modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    OutlinedButton(
-                        onClick = onEditClick, 
-                        shape = RoundedCornerShape(Dimens.CornerRadiusMedium), 
-                        modifier = Modifier.height(36.dp),
-                        contentPadding = PaddingValues(horizontal = Dimens.PaddingMedium)
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // 头像 (带边框和阴影)
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(4.dp, MaterialTheme.colorScheme.surface),
+                        shadowElevation = 4.dp,
+                        modifier = Modifier.size(90.dp)
                     ) {
-                        Text("编辑资料", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(NetworkModule.formatUrl(user.avatar))
+                                .decoderFactory(SvgDecoder.Factory())
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Avatar",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(16.dp))
+                    
+                    // 关注/粉丝数据 (移到头像右侧，更紧凑)
+                    Row(
+                        modifier = Modifier.padding(bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        StatItem(count = followCounts.followingCount, label = "关注") { onStatClick("following", "关注") }
+                        Spacer(modifier = Modifier.width(24.dp))
+                        StatItem(count = followCounts.followersCount, label = "粉丝") { onStatClick("followers", "粉丝") }
+                        Spacer(modifier = Modifier.width(24.dp))
+                        StatItem(count = mutualCount, label = "好友") { onStatClick("mutual", "好友") }
                     }
                 }
-                // 修复：严谨处理 handle，防止出现两个 @
-                Text(
-                    text = "@${user.handle?.replace("@", "") ?: ""}", 
-                    style = MaterialTheme.typography.bodyMedium, 
-                    color = MaterialTheme.colorScheme.outline
-                )
                 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // 昵称与编辑按钮
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = user.nickname, 
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 24.sp),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (!user.handle.isNullOrBlank()) {
+                            Text(
+                                text = "@${user.handle.replace("@", "")}", 
+                                style = MaterialTheme.typography.bodyMedium, 
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
+                    
+                    Button(
+                        onClick = onEditClick,
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 0.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text("编辑资料", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Bio
                 Text(
                     text = user.bio ?: "还没有写个性签名哦", 
                     style = MaterialTheme.typography.bodyMedium, 
-                    lineHeight = 22.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                )
-
-                Row(modifier = Modifier.padding(vertical = 18.dp)) {
-                    StatItem(count = followCounts.followingCount, label = "关注") { onStatClick("following", "关注") }
-                    Spacer(modifier = Modifier.width(28.dp))
-                    StatItem(count = followCounts.followersCount, label = "粉丝") { onStatClick("followers", "粉丝") }
-                    Spacer(modifier = Modifier.width(28.dp))
-                    StatItem(count = mutualCount, label = "好友") { onStatClick("mutual", "好友") }
-                }
-            }
-
-            // 头像位置优化
-            Surface(
-                modifier = Modifier.offset(y = (-50).dp).size(Dimens.AvatarSizeProfile).border(4.dp, MaterialTheme.colorScheme.surface, CircleShape),
-                shape = CircleShape,
-                tonalElevation = 4.dp
-            ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context).data(NetworkModule.formatUrl(user.avatar)).decoderFactory(SvgDecoder.Factory()).crossfade(true).build(),
-                    contentDescription = "Avatar",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    lineHeight = 20.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -310,8 +454,24 @@ fun ProfileHeader(
 
 @Composable
 fun StatItem(count: Int, label: String, onClick: () -> Unit) {
-    Column(modifier = Modifier.clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, onClick = onClick)) {
-        Text(text = count.toString(), fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
-        Text(text = label, color = MaterialTheme.colorScheme.outline, fontSize = 12.sp)
+    Column(
+        modifier = Modifier.clickable(
+            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+            indication = null, 
+            onClick = onClick
+        ),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = count.toString(), 
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold, 
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = label, 
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.outline
+        )
     }
 }

@@ -66,12 +66,49 @@ class MomentRepository(private val apiService: ApiService) {
     }
 
     // 7. 获取用户的收藏列表
-    suspend fun getUserCollections(userId: String, currentUserId: String? = null): List<Moment> {
+    suspend fun getUserCollections(userId: String, currentUserId: String? = null, folderId: String? = null): List<Moment> {
         return try {
-            apiService.getUserCollections(userId, currentUserId)
+            apiService.getUserCollections(userId, currentUserId, folderId)
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
+        }
+    }
+
+    // --- 收藏夹管理 ---
+    suspend fun createFolder(userId: String, name: String): CollectionFolder? {
+        return try {
+            apiService.createFolder(mapOf("userId" to userId, "name" to name))
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    suspend fun getFolders(userId: String): List<CollectionFolder> {
+        return try {
+            apiService.getFolders(userId)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun deleteFolder(id: String, userId: String): Boolean {
+        return try {
+            apiService.deleteFolder(id, mapOf("userId" to userId))
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun moveCollectionToFolder(momentId: String, userId: String, folderId: String?): Boolean {
+        return try {
+            apiService.moveCollectionToFolder(momentId, mapOf("userId" to userId, "folderId" to folderId))
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 

@@ -251,6 +251,7 @@ fun ProfileHeaderSection(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         // 1. Banner & Avatar Container
+        // 1. Banner & Avatar Container
         Box(modifier = Modifier.fillMaxWidth()) {
             // Banner
             AsyncImage(
@@ -282,21 +283,14 @@ fun ProfileHeaderSection(
                     contentScale = ContentScale.Crop
                 )
             }
-        }
-        
-        // 2. Info Section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Dimens.PaddingLarge)
-                .padding(top = Dimens.PaddingSmall) // Space after avatar area
-        ) {
-            // Actions (Right aligned, same row as Avatar roughly)
+
+            // Actions (Right aligned, aligned with bottom of Avatar/Box)
             if (!isMe) {
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .offset(y = (-40).dp), // Move up to align with avatar bottom area
+                        .align(Alignment.BottomEnd)
+                        .padding(end = Dimens.PaddingLarge, bottom = 0.dp) // Align with bottom of Box (which is bottom of Avatar)
+                        .height(40.dp), // Height matches button height roughly
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -324,10 +318,18 @@ fun ProfileHeaderSection(
                         Text(text = if (user.isFollowed == true) "已关注" else "关注")
                     }
                 }
-            } else {
-                 // Placeholder to keep spacing if needed, or just spacer
-                 Spacer(modifier = Modifier.height(10.dp))
             }
+        }
+        
+        // 2. Info Section
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Dimens.PaddingLarge)
+                .padding(top = Dimens.PaddingSmall) // Space after avatar area
+        ) {
+            // Actions Row moved to Box above to fix alignment
+
 
             // Name & Handle
             Row(verticalAlignment = Alignment.CenterVertically) {

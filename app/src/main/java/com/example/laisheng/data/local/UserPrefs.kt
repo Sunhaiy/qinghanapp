@@ -24,7 +24,15 @@ class UserPrefs(context: Context) {
         return prefs.getInt("theme_mode", 0) // Default to System
     }
 
+    fun saveLastCollectionFolder(folderId: String?) {
+        prefs.edit().putString("last_collection_folder", folderId).apply()
+    }
+
+    fun getLastCollectionFolder(): String? {
+        return prefs.getString("last_collection_folder", null)
+    }
+
     fun clear() {
-        prefs.edit().remove("user_id").remove("theme_mode").apply()
+        prefs.edit().remove("user_id").remove("theme_mode").remove("last_collection_folder").apply()
     }
 }

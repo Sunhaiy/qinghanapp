@@ -76,29 +76,61 @@ fun ChatDetailScreen(
             )
         },
         bottomBar = {
-            Surface(tonalElevation = 8.dp, modifier = Modifier.navigationBarsPadding()) {
+            Surface(
+                tonalElevation = 2.dp, 
+                shadowElevation = 8.dp,
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface
+            ) {
                 Row(
-                    modifier = Modifier.padding(Dimens.PaddingSmall).fillMaxWidth(),
+                    modifier = Modifier
+                        .navigationBarsPadding() // Handled by Scaffold usually if not in Surface, but good to be safe here if Surface is full width
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextField(
+                    // Input Text Field
+                    OutlinedTextField(
                         value = text,
                         onValueChange = { text = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("说点什么吧...") },
-                        colors = TextFieldDefaults.colors(
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedContainerColor = Color.Transparent
-                        )
+                        placeholder = { Text("说点什么吧...", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline) },
+                        shape = RoundedCornerShape(24.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent,
+                            disabledBorderColor = Color.Transparent,
+                            cursorColor = MaterialTheme.colorScheme.primary
+                        ),
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        maxLines = 4
                     )
+                    
+                    Spacer(modifier = Modifier.width(12.dp))
+                    
+                    // Send Button
+                    val isEnabled = text.isNotBlank()
                     IconButton(
                         onClick = {
                             viewModel.sendMessage(userId, otherId, text)
                             text = ""
                         },
-                        enabled = text.isNotBlank()
+                        enabled = isEnabled,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(
+                                color = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                shape = CircleShape
+                            )
                     ) {
-                        Icon(Icons.Default.Send, null, tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            imageVector = Icons.Default.Send, 
+                            contentDescription = "Send", 
+                            tint = if (isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }

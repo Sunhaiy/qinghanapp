@@ -3,6 +3,7 @@ package com.example.laisheng.ui.features.mine
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.laisheng.data.remote.NetworkModule
+import com.example.laisheng.data.model.CollectionFolder
 import com.example.laisheng.data.model.FollowCounts
 import com.example.laisheng.data.model.Moment
 import com.example.laisheng.data.model.User
@@ -19,7 +20,8 @@ sealed class MineUiState {
         val likedMoments: List<Moment>,
         val collectedMoments: List<Moment>,
         val followCounts: FollowCounts,
-        val mutualFriends: List<User>
+        val mutualFriends: List<User>,
+        val folders: List<CollectionFolder> = emptyList()
     ) : MineUiState()
     data class Error(val message: String) : MineUiState()
 }
@@ -40,6 +42,9 @@ class MineViewModel : ViewModel() {
     private val _selectedTab = MutableStateFlow(MineTab.MOMENTS)
     val selectedTab = _selectedTab.asStateFlow()
 
+    private val _selectedFolderId = MutableStateFlow<String?>(null)
+    val selectedFolderId = _selectedFolderId.asStateFlow()
+
     private var currentUserId: String? = null
 
     fun selectTab(tab: MineTab) {
@@ -58,7 +63,11 @@ class MineViewModel : ViewModel() {
                 // 1. 获取所有列表的原始数据
                 val momentsRaw = repository.getUserMoments(userId, currentUserId = userId)?.data ?: emptyList()
                 val likedRaw = repository.getUserLikedMoments(userId, currentUserId = userId)
-                val collectedRaw = repository.getUserCollections(userId, currentUserId = userId)
+                
+                val folders = repository.getFolders(userId)
+                
+                val collectionFolderId = _selectedFolderId.value
+                val collectedRaw = repository.getUserCollections(userId, currentUserId = userId, folderId = collectionFolderId)
 
                 // 2. 生成已点赞和已收藏的 ID 集合，确保跨 Tab 的一致性
                 val likedIds = likedRaw.map { it.id }.toSet()
@@ -75,7 +84,7 @@ class MineViewModel : ViewModel() {
                 val collected = collectedRaw.map(::sync)
 
                 if (user != null) {
-                    _uiState.value = MineUiState.Success(user, moments, liked, collected, followCounts, mutualFriends)
+                    _uiState.value = MineUiState.Success(user, moments, liked, collected, followCounts, mutualFriends, folders)
                 }
             } catch (e: Exception) {
                 _uiState.value = MineUiState.Error(e.message ?: "网络错误")
@@ -100,6 +109,37 @@ class MineViewModel : ViewModel() {
                 repository.toggleCollection(userId, momentId)
                 loadData(userId, isRefresh = false)
             } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
+    fun selectFolder(folderId: String?) {
+        _selectedFolderId.value = folderId
+        currentUserId?.let { loadData(it, isRefresh = false) }
+    }
+
+    fun createFolder(name: String) {
+        viewModelScope.launch {
+            currentUserId?.let { uid ->
+                repository.createFolder(uid, name)
+                loadData(uid, isRefresh = false)
+            }
+        }
+    }
+
+    fun deleteFolder(folderId: String) {
+        viewModelScope.launch {
+            currentUserId?.let { uid ->
+                repository.deleteFolder(folderId, uid)
+                _selectedFolderId.value = null
+                loadData(uid, isRefresh = false)
+            }
+        }
+    }
+
+    fun moveCollectionToFolder(momentId: String, userId: String, folderId: String?) {
+        viewModelScope.launch {
+            repository.moveCollectionToFolder(momentId, userId, folderId)
+            loadData(userId, isRefresh = false)
         }
     }
 }

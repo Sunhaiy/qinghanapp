@@ -63,14 +63,31 @@ interface ApiService {
     @GET("api/collections/user/{userId}")
     suspend fun getUserCollections(
         @Path("userId") userId: String,
-        @Query("current_user_id") currentUserId: String? = null // 新增支持
+        @Query("current_user_id") currentUserId: String? = null,
+        @Query("folderId") folderId: String? = null
     ): List<Moment>
 
     @GET("api/likes/user/{userId}")
     suspend fun getUserLikedMoments(
         @Path("userId") userId: String,
-        @Query("current_user_id") currentUserId: String? = null // 新增支持
+        @Query("current_user_id") currentUserId: String? = null
     ): List<Moment>
+
+    // --- 收藏夹管理 ---
+    @POST("api/collections/folders")
+    suspend fun createFolder(@Body request: Map<String, String>): CollectionFolder
+
+    @GET("api/collections/folders")
+    suspend fun getFolders(@Query("userId") userId: String): List<CollectionFolder>
+
+    @DELETE("api/collections/folders/{id}")
+    suspend fun deleteFolder(@Path("id") id: String, @Body request: Map<String, String>): CollectionFolder
+
+    @PUT("api/collections/{id}")
+    suspend fun moveCollectionToFolder(
+        @Path("id") id: String,
+        @Body request: Map<String, String?> // userId, folderId
+    ): Map<String, Any>
 
     // --- 关注相关 ---
     @POST("api/follows/toggle")

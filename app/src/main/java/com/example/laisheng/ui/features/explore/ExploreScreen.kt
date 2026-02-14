@@ -11,10 +11,15 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 import com.example.laisheng.ui.components.PostCard
+import com.example.laisheng.ui.features.mine.MoveToFolderDialog
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
@@ -34,17 +39,48 @@ fun ExploreScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val isLoadingMore by viewModel.isLoadingMore.collectAsState()
 
+    val folders by viewModel.folders.collectAsState()
+    var showCollectionDialog by remember { mutableStateOf<String?>(null) } // momentId or null
+
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) {
             viewModel.refresh(userId)
+            viewModel.loadFolders(userId)
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .hazeSource(state = hazeState)
-    ) {
+    // Snackbar state
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    // Collect Snackbar events
+    LaunchedEffect(viewModel) {
+        viewModel.snackbarEvent.collect { event ->
+            val result = snackbarHostState.showSnackbar(
+                message = event.message,
+                actionLabel = event.actionLabel,
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                event.onAction?.invoke()
+            }
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { 
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding())
+            ) 
+        },
+        containerColor = Color.Transparent
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .hazeSource(state = hazeState)
+        ) {
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = { viewModel.refresh(userId) },
@@ -69,7 +105,9 @@ fun ExploreScreen(
                             },
                             onCommentClick = { onMomentClick(moment.id) }, // 点击评论按钮也跳转到详情页
                             onBookmarkClick = {
-                                viewModel.onBookmarkClick(userId, moment.id)
+                                viewModel.onBookmarkClick(userId, moment.id) {
+                                     showCollectionDialog = moment.id
+                                }
                             }
                         )
                     }
@@ -96,5 +134,17 @@ fun ExploreScreen(
                 }
             }
         }
+
+        if (showCollectionDialog != null) {
+            MoveToFolderDialog(
+                folders = folders,
+                onDismiss = { showCollectionDialog = null },
+                onSelectFolder = { folderId ->
+                    viewModel.confirmCollection(userId, showCollectionDialog!!, folderId)
+                    showCollectionDialog = null
+                }
+            )
+        }
     }
+}
 }
