@@ -30,6 +30,8 @@ import com.example.laisheng.ui.theme.Dimens
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
+import com.example.laisheng.ui.components.LaishengLoading
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessageScreen(
@@ -61,7 +63,7 @@ fun MessageScreen(
             when (val state = uiState) {
                 is MessageUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        LaishengLoading()
                     }
                 }
                 is MessageUiState.Success -> {

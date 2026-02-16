@@ -35,6 +35,8 @@ import com.example.laisheng.ui.features.mine.MoveToFolderDialog
 
 import com.example.laisheng.ui.theme.Dimens
 
+import com.example.laisheng.ui.components.LaishengLoading
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun MomentDetailScreen(
@@ -123,7 +125,7 @@ fun MomentDetailScreen(
             when (val state = uiState) {
                 is MomentDetailUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        LaishengLoading()
                     }
                 }
                 is MomentDetailUiState.Success -> {

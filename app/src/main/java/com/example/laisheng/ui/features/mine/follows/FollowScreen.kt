@@ -27,6 +27,9 @@ import coil.request.ImageRequest
 import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.User
 
+import com.example.laisheng.ui.components.LaishengLoading
+import com.example.laisheng.ui.components.UserItem
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FollowScreen(
@@ -79,7 +82,7 @@ fun FollowScreen(
                 when (val state = uiState) {
                     is FollowUiState.Loading -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
+                            LaishengLoading()
                         }
                     }
                     is FollowUiState.Success -> {
@@ -109,50 +112,3 @@ fun FollowScreen(
     }
 }
 
-@Composable
-private fun UserItem(user: User, onUserClick: () -> Unit) {
-    val context = LocalContext.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(NetworkModule.formatUrl(user.avatar))
-                .decoderFactory(SvgDecoder.Factory())
-                .build(),
-            contentDescription = null,
-            modifier = Modifier
-                .size(50.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentScale = ContentScale.Crop
-        )
-        
-        Spacer(modifier = Modifier.width(16.dp))
-        
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = user.nickname,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = user.handle,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
-        }
-        
-        OutlinedButton(
-            onClick = { onUserClick() },
-            shape = RoundedCornerShape(20.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-            modifier = Modifier.height(32.dp)
-        ) {
-            Text("查看", fontSize = 12.sp)
-        }
-    }
-}

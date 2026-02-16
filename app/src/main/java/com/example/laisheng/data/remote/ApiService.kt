@@ -50,6 +50,19 @@ interface ApiService {
         @Query("current_user_id") currentUserId: String? = null
     ): MomentResponse
 
+    @GET("api/moments/search")
+    suspend fun searchMoments(
+        @Query("q") query: String,
+        @Query("page") page: Int,
+        @Query("limit") limit: Int,
+        @Query("current_user_id") currentUserId: String?
+    ): MomentResponse
+
+    @GET("api/users/search")
+    suspend fun searchUsers(
+        @Query("q") query: String
+    ): List<User>
+
     @POST("api/moments")
     suspend fun createMoment(@Body request: CreateMomentRequest): Moment
 

@@ -45,6 +45,8 @@ import java.io.File
 
 import com.example.laisheng.ui.theme.Dimens
 
+import com.example.laisheng.ui.components.LaishengLoading
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostScreen(
@@ -126,7 +128,7 @@ fun PostScreen(
                     contentPadding = PaddingValues(horizontal = 24.dp)
                 ) {
                     if (uiState is PostUiState.Loading) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                        LaishengLoading(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
                         Text("发布", fontWeight = FontWeight.Bold)
                     }

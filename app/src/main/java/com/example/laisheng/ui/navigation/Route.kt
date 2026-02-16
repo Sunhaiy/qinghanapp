@@ -39,4 +39,16 @@ sealed class Route(
         selectedIcon = Lucide.User,
         unselectedIcon = Lucide.User
     )
+    object Search : Route(
+        route = "search",
+        title = "搜索",
+        selectedIcon = Lucide.Search,
+        unselectedIcon = Lucide.Search
+    )
+    object Settings : Route(
+        route = "settings",
+        title = "设置",
+        selectedIcon = Lucide.Settings,
+        unselectedIcon = Lucide.Settings
+    )
 }

@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+import com.example.laisheng.ui.components.LaishengLoading
+
 @Composable
 fun LoginScreen(
     onLoginSuccess: (String) -> Unit,
@@ -132,7 +134,7 @@ fun LoginScreen(
             enabled = uiState !is LoginUiState.Loading
         ) {
             if (uiState is LoginUiState.Loading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                LaishengLoading(modifier = Modifier.size(24.dp), color = Color.White)
             } else {
                 Text(if (isRegisterMode) "注册并进入" else "登录", fontSize = 16.sp)
             }

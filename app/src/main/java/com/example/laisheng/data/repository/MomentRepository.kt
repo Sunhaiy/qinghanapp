@@ -65,6 +65,24 @@ class MomentRepository(private val apiService: ApiService) {
         }
     }
 
+    suspend fun searchMoments(query: String, page: Int, limit: Int = 20, currentUserId: String? = null): MomentResponse? {
+        return try {
+            apiService.searchMoments(query, page, limit, currentUserId)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    suspend fun searchUsers(query: String): List<User> {
+        return try {
+            apiService.searchUsers(query)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
     // 7. 获取用户的收藏列表
     suspend fun getUserCollections(userId: String, currentUserId: String? = null, folderId: String? = null): List<Moment> {
         return try {

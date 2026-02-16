@@ -32,7 +32,21 @@ class UserPrefs(context: Context) {
         return prefs.getString("last_collection_folder", null)
     }
 
+    // Search History
+    fun getSearchHistory(): Set<String> {
+        // Return a copy to avoid modification issues
+        return prefs.getStringSet("search_history", emptySet()) ?: emptySet()
+    }
+
+    fun saveSearchHistory(history: Set<String>) {
+        prefs.edit().putStringSet("search_history", history).apply()
+    }
+    
+    fun clearSearchHistory() {
+        prefs.edit().remove("search_history").apply()
+    }
+
     fun clear() {
-        prefs.edit().remove("user_id").remove("theme_mode").remove("last_collection_folder").apply()
+        prefs.edit().clear().apply()
     }
 }

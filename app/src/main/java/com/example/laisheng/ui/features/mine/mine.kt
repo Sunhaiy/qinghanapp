@@ -43,6 +43,8 @@ import com.example.laisheng.ui.theme.Dimens
 
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 
+import com.example.laisheng.ui.components.LaishengLoading
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
 @Composable
 fun MineScreen(
@@ -82,7 +84,7 @@ fun MineScreen(
             when (val state = uiState) {
                 is MineUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(strokeWidth = 2.dp)
+                        LaishengLoading(strokeWidth = 2.dp)
                     }
                 }
                 is MineUiState.Success -> {

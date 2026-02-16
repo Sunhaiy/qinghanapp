@@ -115,10 +115,17 @@ fun Laisheng(mainViewModel: MainViewModel) {
                                  currentRoute?.startsWith("follows") == true ||
                                  currentRoute?.startsWith("edit_profile") == true ||
                                  currentRoute?.startsWith("user_profile") == true ||
-                                 currentRoute == "settings" || // Hide top bar for settings
+                                 currentRoute == Route.Settings.route || // Hide top bar for settings
                                  currentRoute == Route.Post.route ||
-                                 currentRoute == Route.Mine.route // 核心修正：让我的页面自己处理 TopBar
-                if (!isFullScreen) TopBar(hazeState, currentRoute)
+                                 currentRoute == Route.Mine.route || // 核心修正：让我的页面自己处理 TopBar
+                                 currentRoute == Route.Search.route
+                if (!isFullScreen) {
+                    TopBar(
+                        hazeState, 
+                        currentRoute,
+                        onSearchClick = { navController.navigate(Route.Search.route) }
+                    )
+                }
             },
             bottomBar = {
                 val isFullScreen = currentRoute?.startsWith("moment_detail") == true || 
@@ -127,7 +134,8 @@ fun Laisheng(mainViewModel: MainViewModel) {
                                  currentRoute?.startsWith("edit_profile") == true ||
                                  currentRoute?.startsWith("user_profile") == true ||
                                  currentRoute == "settings" || // Hide bottom bar for settings
-                                 currentRoute == Route.Post.route
+                                 currentRoute == Route.Post.route ||
+                                 currentRoute == Route.Search.route
                 // 我的页面保留底部栏，但顶栏自己控制
                 if (!isFullScreen) BottomNavigation(hazeState, navController, items)
             }
@@ -136,14 +144,24 @@ fun Laisheng(mainViewModel: MainViewModel) {
                 NavHost(navController = navController, startDestination = Route.Home.route) {
                     composable(Route.Home.route) { HomeScreen(hazeState, paddingValues) }
                     composable(Route.Explore.route) {
-                        ExploreScreen(
-                            hazeState, 
-                            paddingValues, 
-                            userId, 
-                            { id -> navController.navigate("moment_detail/$id") }, 
-                            { uid -> navController.navigate("user_profile/$uid") }, // Pass onUserClick
-                            this@SharedTransitionLayout, 
-                            this@composable
+                            ExploreScreen(
+                                hazeState, 
+                                paddingValues, 
+                                userId, 
+                                { id -> navController.navigate("moment_detail/$id") }, 
+                                { uid -> navController.navigate("user_profile/$uid") }, 
+                                this@SharedTransitionLayout, 
+                                this@composable
+                            )
+                    }
+                    composable(Route.Search.route) {
+                        com.example.laisheng.ui.features.explore.search.SearchScreen(
+                            userId = userId,
+                            onBackClick = { navController.popBackStack() },
+                            onMomentClick = { id -> navController.navigate("moment_detail/$id") },
+                            onUserClick = { uid -> navController.navigate("user_profile/$uid") },
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this@composable
                         )
                     }
                     composable(Route.Post.route) {
@@ -336,7 +354,7 @@ fun BottomNavigation(hazeState: HazeState, navController: NavController, items: 
 }
 
 @Composable
-fun TopBar(hazeState: HazeState, currentRoute: String?) {
+fun TopBar(hazeState: HazeState, currentRoute: String?, onSearchClick: () -> Unit) {
     val itemsList = listOf(Route.Home, Route.Explore, Route.Post, Route.Message, Route.Mine)
     val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
     val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
@@ -360,7 +378,7 @@ fun TopBar(hazeState: HazeState, currentRoute: String?) {
                 }
                 Route.Explore.route -> Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(text = "探索", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = contentColor)
-                    IconButton(onClick = {}) { Icon(imageVector = Lucide.Search, contentDescription = null, tint = contentColor) }
+                    IconButton(onClick = onSearchClick) { Icon(imageVector = Lucide.Search, contentDescription = null, tint = contentColor) }
                 }
                 else -> {
                     val title = itemsList.find { it.route == currentRoute }?.title ?: "来声"

@@ -31,6 +31,8 @@ import com.example.laisheng.data.model.ChatMessage
 
 import com.example.laisheng.ui.theme.Dimens
 
+import com.example.laisheng.ui.components.LaishengLoading
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatDetailScreen(
@@ -144,7 +146,7 @@ fun ChatDetailScreen(
         ) {
             when (val state = uiState) {
                 is ChatDetailUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    LaishengLoading(modifier = Modifier.align(Alignment.Center))
                 }
                 is ChatDetailUiState.Success -> {
                     LazyColumn(

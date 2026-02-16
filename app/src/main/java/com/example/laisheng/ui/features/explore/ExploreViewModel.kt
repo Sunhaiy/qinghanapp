@@ -92,6 +92,8 @@ class ExploreViewModel(application: Application) : AndroidViewModel(application)
     private val _folders = MutableStateFlow<List<CollectionFolder>>(emptyList())
     val folders = _folders.asStateFlow()
 
+
+
     fun loadFolders(userId: String) {
         viewModelScope.launch {
             val folders = repository.getFolders(userId)

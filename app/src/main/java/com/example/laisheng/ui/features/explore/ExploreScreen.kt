@@ -3,11 +3,18 @@ package com.example.laisheng.ui.features.explore
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,7 +37,7 @@ fun ExploreScreen(
     paddingValues: PaddingValues,
     userId: String,
     onMomentClick: (String) -> Unit,
-    onUserClick: (String) -> Unit, // Add callback
+    onUserClick: (String) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: ExploreViewModel = viewModel()
@@ -73,62 +80,68 @@ fun ExploreScreen(
                 modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding())
             ) 
         },
-        containerColor = Color.Transparent
+        containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0.dp)
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
                 .hazeSource(state = hazeState)
         ) {
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = { viewModel.refresh(userId) },
-            modifier = Modifier.fillMaxSize()
-        ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = paddingValues
-            ) {
-                itemsIndexed(moments) { index, moment ->
-                    with(sharedTransitionScope) {
-                        PostCard(
-                            moment = moment,
-                            modifier = Modifier.sharedElement(
-                                rememberSharedContentState(key = "item-${moment.id}"),
-                                animatedVisibilityScope = animatedVisibilityScope
-                            ),
-                            onCardClick = { onMomentClick(moment.id) },
-                            onUserClick = { onUserClick(moment.userId) }, // Wire up
-                            onLikeClick = {
-                                viewModel.onLikeClick(userId, moment.id)
-                            },
-                            onCommentClick = { onMomentClick(moment.id) }, // 点击评论按钮也跳转到详情页
-                            onBookmarkClick = {
-                                viewModel.onBookmarkClick(userId, moment.id) {
-                                     showCollectionDialog = moment.id
+            Column(modifier = Modifier.fillMaxSize()) {
+
+
+                // Default Feed
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = { viewModel.refresh(userId) },
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = paddingValues
+                    ) {
+                        itemsIndexed(moments) { index, moment ->
+                            with(sharedTransitionScope) {
+                                PostCard(
+                                    moment = moment,
+                                    modifier = Modifier.sharedElement(
+                                        rememberSharedContentState(key = "item-${moment.id}"),
+                                        animatedVisibilityScope = animatedVisibilityScope
+                                    ),
+                                    onCardClick = { onMomentClick(moment.id) },
+                                    onUserClick = { onUserClick(moment.userId) }, 
+                                    onLikeClick = {
+                                        viewModel.onLikeClick(userId, moment.id)
+                                    },
+                                    onCommentClick = { onMomentClick(moment.id) }, 
+                                    onBookmarkClick = {
+                                        viewModel.onBookmarkClick(userId, moment.id) {
+                                            showCollectionDialog = moment.id
+                                        }
+                                    }
+                                )
+                            }
+                            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                            
+                            if (index >= moments.size - 2) {
+                                LaunchedEffect(moments.size) {
+                                    viewModel.loadNextPage(userId)
                                 }
                             }
-                        )
-                    }
-                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                    
-                    if (index >= moments.size - 2) {
-                        LaunchedEffect(moments.size) {
-                            viewModel.loadNextPage(userId)
                         }
-                    }
-                }
 
-                if (isLoadingMore) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        if (isLoadingMore) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    com.example.laisheng.ui.components.LaishengLoading()
+                                }
+                            }
                         }
                     }
                 }
@@ -147,4 +160,22 @@ fun ExploreScreen(
         }
     }
 }
+
+@Composable
+fun EmptySearchState() {
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                androidx.compose.material.icons.Icons.Default.Search,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.outline
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("没有找到相关内容", color = MaterialTheme.colorScheme.outline)
+        }
+    }
 }

@@ -44,6 +44,8 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.HazeMaterials
 
+import com.example.laisheng.ui.components.LaishengLoading
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserProfileScreen(
@@ -91,7 +93,7 @@ fun UserProfileScreen(
             when (val state = uiState) {
                 is UserProfileUiState.Loading -> {
                      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        LaishengLoading()
                     }
                 }
                 is UserProfileUiState.Success -> {

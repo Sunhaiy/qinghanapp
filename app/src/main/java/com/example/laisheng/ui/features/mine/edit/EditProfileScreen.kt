@@ -37,6 +37,8 @@ import androidx.compose.animation.AnimatedVisibility
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Info
 
+import com.example.laisheng.ui.components.LaishengLoading
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
@@ -88,7 +90,7 @@ fun EditProfileScreen(
                 },
                 actions = {
                     if (uiState is EditUiState.Loading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        LaishengLoading(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     } else {
                         TextButton(
                             onClick = {
