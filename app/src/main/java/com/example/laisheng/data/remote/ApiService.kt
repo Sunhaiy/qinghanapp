@@ -58,6 +58,18 @@ interface ApiService {
         @Query("current_user_id") currentUserId: String?
     ): MomentResponse
 
+    @GET("api/moments/featured")
+    suspend fun getFeaturedMoments(
+        @Query("current_user_id") currentUserId: String? = null
+    ): List<Moment>
+
+    @GET("api/moments/following")
+    suspend fun getFollowingMoments(
+        @Query("page") page: Int? = 1,
+        @Query("limit") limit: Int? = 10,
+        @Query("current_user_id") currentUserId: String? = null
+    ): MomentResponse
+
     @GET("api/users/search")
     suspend fun searchUsers(
         @Query("q") query: String

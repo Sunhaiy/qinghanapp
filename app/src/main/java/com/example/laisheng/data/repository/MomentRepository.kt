@@ -73,6 +73,24 @@ class MomentRepository(private val apiService: ApiService) {
             null
         }
     }
+    
+    suspend fun getFeaturedMoments(currentUserId: String? = null): List<Moment>? {
+        return try {
+            apiService.getFeaturedMoments(currentUserId)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    suspend fun getFollowingMoments(page: Int = 1, limit: Int = 10, currentUserId: String? = null): MomentResponse? {
+        return try {
+            apiService.getFollowingMoments(page, limit, currentUserId)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 
     suspend fun searchUsers(query: String): List<User> {
         return try {

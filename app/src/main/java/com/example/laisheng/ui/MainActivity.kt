@@ -142,7 +142,17 @@ fun Laisheng(mainViewModel: MainViewModel) {
         ) { paddingValues ->
             SharedTransitionLayout {
                 NavHost(navController = navController, startDestination = Route.Home.route) {
-                    composable(Route.Home.route) { HomeScreen(hazeState, paddingValues) }
+                    composable(Route.Home.route) { 
+                        HomeScreen(
+                            hazeState, 
+                            paddingValues,
+                            userId, // userId
+                            { id -> navController.navigate("moment_detail/$id") }, // onMomentClick
+                            { uid -> navController.navigate("user_profile/$uid") }, // onUserClick
+                            this@SharedTransitionLayout, // sharedTransitionScope
+                            this@composable // animatedVisibilityScope
+                        )
+                    }
                     composable(Route.Explore.route) {
                             ExploreScreen(
                                 hazeState, 
