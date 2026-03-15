@@ -2,7 +2,6 @@ package com.example.laisheng.ui
 
 import android.net.Uri
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -20,7 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -115,9 +113,9 @@ fun Laisheng(mainViewModel: MainViewModel) {
                                  currentRoute?.startsWith("follows") == true ||
                                  currentRoute?.startsWith("edit_profile") == true ||
                                  currentRoute?.startsWith("user_profile") == true ||
-                                 currentRoute == Route.Settings.route || // Hide top bar for settings
+                                 currentRoute == Route.Settings.route || 
                                  currentRoute == Route.Post.route ||
-                                 currentRoute == Route.Mine.route || // 核心修正：让我的页面自己处理 TopBar
+                                 currentRoute == Route.Mine.route || 
                                  currentRoute == Route.Search.route
                 if (!isFullScreen) {
                     TopBar(
@@ -133,10 +131,9 @@ fun Laisheng(mainViewModel: MainViewModel) {
                                  currentRoute?.startsWith("follows") == true ||
                                  currentRoute?.startsWith("edit_profile") == true ||
                                  currentRoute?.startsWith("user_profile") == true ||
-                                 currentRoute == "settings" || // Hide bottom bar for settings
+                                 currentRoute == "settings" || 
                                  currentRoute == Route.Post.route ||
                                  currentRoute == Route.Search.route
-                // 我的页面保留底部栏，但顶栏自己控制
                 if (!isFullScreen) BottomNavigation(hazeState, navController, items)
             }
         ) { paddingValues ->
@@ -144,13 +141,13 @@ fun Laisheng(mainViewModel: MainViewModel) {
                 NavHost(navController = navController, startDestination = Route.Home.route) {
                     composable(Route.Home.route) { 
                         HomeScreen(
-                            hazeState, 
-                            paddingValues,
-                            userId, // userId
-                            { id -> navController.navigate("moment_detail/$id") }, // onMomentClick
-                            { uid -> navController.navigate("user_profile/$uid") }, // onUserClick
-                            this@SharedTransitionLayout, // sharedTransitionScope
-                            this@composable // animatedVisibilityScope
+                            hazeState = hazeState, 
+                            paddingValues = paddingValues,
+                            userId = userId,
+                            onMomentClick = { id: String -> navController.navigate("moment_detail/$id") },
+                            onUserClick = { uid: String -> navController.navigate("user_profile/$uid") },
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this@composable
                         )
                     }
                     composable(Route.Explore.route) {
@@ -191,7 +188,7 @@ fun Laisheng(mainViewModel: MainViewModel) {
                             onFollowClick = { uid, title, type -> navController.navigate("follows/$uid/$title/$type") }, 
                             onEditClick = { nick, handle, bio, av, bg, lastUpdate ->
                                 val eN = Uri.encode(nick); val eH = Uri.encode(handle)
-                                val eB = Uri.encode(bio ?: ""); val eA = Uri.encode(av ?: ""); val eG = Uri.encode(bg ?: ""); val eL = Uri.encode(lastUpdate ?: "")
+                                val eB = Uri.encode(bio); val eA = Uri.encode(av); val eG = Uri.encode(bg); val eL = Uri.encode(lastUpdate)
                                 navController.navigate("edit_profile/$userId/$eH/$eN/$eB?avatar=$eA&bg=$eG&lastUpdate=$eL")
                             }, 
                             onMomentClick = { id -> navController.navigate("moment_detail/$id") },
