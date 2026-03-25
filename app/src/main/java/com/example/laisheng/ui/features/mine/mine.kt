@@ -1,51 +1,68 @@
 package com.example.laisheng.ui.features.mine
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.*
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
-import com.composables.icons.lucide.*
-import com.example.laisheng.data.remote.NetworkModule
-import com.example.laisheng.data.model.FollowCounts
+import com.example.laisheng.data.model.Moment
 import com.example.laisheng.data.model.User
-import com.example.laisheng.data.model.CollectionFolder
-import com.example.laisheng.ui.components.PostCard
+import com.example.laisheng.data.remote.NetworkModule
+import com.example.laisheng.ui.MainViewModel
+import com.example.laisheng.ui.components.LaishengLoading
+import com.example.laisheng.ui.theme.AppIcon
+import com.example.laisheng.ui.theme.AppIcons
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.materials.HazeMaterials
 import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.materials.HazeMaterials
 
-import com.example.laisheng.ui.MainViewModel
-import com.example.laisheng.ui.theme.Dimens
-
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-
-import com.example.laisheng.ui.components.LaishengLoading
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
 @Composable
 fun MineScreen(
     hazeState: HazeState,
@@ -55,399 +72,124 @@ fun MineScreen(
     onEditClick: (String, String, String, String?, String?, String?) -> Unit,
     onMomentClick: (String) -> Unit,
     onSettingsClick: () -> Unit = {},
+    onOpenMoments: () -> Unit,
+    onOpenLikes: () -> Unit,
+    onOpenCollections: () -> Unit,
     viewModel: MineViewModel = viewModel(),
-    mainViewModel: MainViewModel // Add MainViewModel
+    mainViewModel: MainViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val selectedTab by viewModel.selectedTab.collectAsState()
-    
-    // Theme state
     val themeMode by mainViewModel.themeMode.collectAsState()
-    
-    // Folder state
-    val selectedFolderId by viewModel.selectedFolderId.collectAsState()
-    var showCreateFolderDialog by remember { mutableStateOf(false) }
-    var showMoveDialog by remember { mutableStateOf(false) }
-    var longPressedMomentId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) viewModel.loadData(userId)
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = { viewModel.loadData(userId) },
-            modifier = Modifier.fillMaxSize()
-        ) {
-            when (val state = uiState) {
-                is MineUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        LaishengLoading(strokeWidth = 2.dp)
-                    }
-                }
-                is MineUiState.Success -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize().hazeSource(state = hazeState),
-                        contentPadding = PaddingValues(bottom = paddingValues.calculateBottomPadding())
-                    ) {
-                        item {
-                            ProfileHeader(
-                                user = state.user, 
-                                followCounts = state.followCounts,
-                                mutualCount = state.mutualFriends.size,
-                                onStatClick = { type, title -> onFollowClick(userId, title, type) },
-                                onEditClick = {
-                                    onEditClick(state.user.nickname, state.user.handle, state.user.bio ?: "", state.user.avatar, state.user.bgImage, state.user.handleLastUpdatedAt)
-                                }
-                            )
-                        }
-
-                        item {
-                            Surface(
-                                color = MaterialTheme.colorScheme.surface,
-                                shadowElevation = 0.dp, // Remove shadow for cleaner look
-                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp) // Add spacing
-                            ) {
-                                TabRow(
-                                    selectedTabIndex = selectedTab.ordinal,
-                                    containerColor = Color.Transparent,
-                                    contentColor = MaterialTheme.colorScheme.primary,
-                                    divider = {},
-                                    indicator = { tabPositions ->
-                                        if (selectedTab.ordinal < tabPositions.size) {
-                                            val currentTab = tabPositions[selectedTab.ordinal]
-                                            val indicatorWidth = 16.dp
-                                            
-                                            // 居中短横条指示器
-                                            Box(
-                                                Modifier
-                                                    .tabIndicatorOffset(currentTab)
-                                                    .wrapContentSize(Alignment.BottomCenter)
-                                                    .width(indicatorWidth)
-                                                    .height(3.dp)
-                                                    .background(
-                                                        color = MaterialTheme.colorScheme.primary,
-                                                        shape = RoundedCornerShape(3.dp)
-                                                    )
-                                            )
-                                        }
-                                    }
-                                ) {
-                                    MineTab.entries.forEach { tab ->
-                                        val isSelected = selectedTab == tab
-                                        Tab(
-                                            selected = isSelected,
-                                            onClick = { viewModel.selectTab(tab) },
-                                            text = {
-                                                Text(
-                                                    text = when(tab) {
-                                                        MineTab.MOMENTS -> "动态"
-                                                        MineTab.LIKED -> "赞过"
-                                                        MineTab.COLLECTED -> "收藏"
-                                                    },
-                                                    style = if (isSelected) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
-                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            },
-                                            selectedContentColor = MaterialTheme.colorScheme.primary,
-                                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        if (selectedTab == MineTab.COLLECTED) {
-                            item {
-                                FolderList(
-                                    folders = (state as? MineUiState.Success)?.folders ?: emptyList(),
-                                    selectedFolderId = selectedFolderId,
-                                    onFolderClick = { viewModel.selectFolder(it) },
-                                    onCreateClick = { showCreateFolderDialog = true },
-                                    onDeleteFolder = { viewModel.deleteFolder(it) }
-                                )
-                            }
-                        }
-
-                        val currentList = when(selectedTab) {
-                            MineTab.MOMENTS -> state.moments
-                            MineTab.LIKED -> state.likedMoments
-                            MineTab.COLLECTED -> state.collectedMoments
-                        }
-
-                        if (currentList.isEmpty()) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillParentMaxHeight(0.5f)
-                                        .fillMaxWidth()
-                                        .padding(top = 48.dp), 
-                                    contentAlignment = Alignment.TopCenter
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Icon(
-                                            imageVector = Lucide.Inbox, 
-                                            contentDescription = null, 
-                                            modifier = Modifier.size(64.dp), 
-                                            tint = MaterialTheme.colorScheme.surfaceVariant
-                                        )
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        Text(
-                                            text = "这里什么都没有", 
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Text(
-                                            text = "去发点动态或者关注有趣的人吧", 
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.outline
-                                        )
-                                    }
-                                }
-                            }
-                        } else {
-                            itemsIndexed(currentList) { _, moment ->
-                                PostCard(
-                                    moment = moment,
-                                    onCardClick = { onMomentClick(moment.id) },
-                                    onLikeClick = { viewModel.toggleLike(moment.id, userId) },
-                                    onBookmarkClick = { viewModel.toggleCollect(moment.id, userId) },
-                                    onCommentClick = { onMomentClick(moment.id) },
-                                    onLongClick = {
-                                        if (selectedTab == MineTab.COLLECTED) {
-                                            longPressedMomentId = moment.id
-                                            showMoveDialog = true
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-                is MineUiState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = state.message, color = MaterialTheme.colorScheme.error)
-                    }
-                }
-            }
-        }
-
-        // 顶栏：样式完全对齐“探索”页面，且具有上下一致的模糊感
-        MineTopBar(
-            hazeState = hazeState, 
-            onSettingsClick = onSettingsClick,
-            themeMode = themeMode,
-            onThemeToggle = {
-                // Toggle between Light (1) and Dark (2). Default/System(0) treats as auto. 
-                // Simple logic: if currently Dark (2) then Light(1), else Dark(2).
-                // If System (0), we check system state but simple toggle forces manual mode. 
-                // Let's say: if mode is 2 -> 1, else -> 2.
-                val newMode = if (themeMode == 2) 1 else 2
-                mainViewModel.setThemeMode(newMode)
-            }
-        )
-        
-        if (showCreateFolderDialog) {
-            CreateFolderDialog(
-                onDismiss = { showCreateFolderDialog = false },
-                onConfirm = { name -> 
-                    viewModel.createFolder(name)
-                    showCreateFolderDialog = false
-                }
-            )
-        }
-
-        if (showMoveDialog && longPressedMomentId != null) {
-            MoveToFolderDialog(
-                folders = (uiState as? MineUiState.Success)?.folders ?: emptyList(),
-                onDismiss = { showMoveDialog = false; longPressedMomentId = null },
-                onSelectFolder = { folderId ->
-                    viewModel.moveCollectionToFolder(longPressedMomentId!!, userId, folderId)
-                    showMoveDialog = false
-                    longPressedMomentId = null
-                }
-            )
-        }
-    }
-}
-
-@Composable
-fun MineTopBar(
-    hazeState: HazeState, 
-    onSettingsClick: () -> Unit,
-    themeMode: Int,
-    onThemeToggle: () -> Unit
-) {
-    // ... icon logic ...
-    
-    val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
-    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-    val contentColor = MaterialTheme.colorScheme.onSurface
-
-    Column(
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin())
-            .background(backgroundColor) 
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .height(56.dp)
-                .padding(horizontal = 12.dp),
-            contentAlignment = Alignment.CenterEnd
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onThemeToggle) {
-                    Icon(
-                        imageVector = if (themeMode == 2) Lucide.Sun else Lucide.Moon, 
-                        contentDescription = "切换主题", 
-                        modifier = Modifier.size(22.dp),
-                        tint = contentColor
-                    )
-                }
-                IconButton(onClick = onSettingsClick) {
-                    Icon(
-                        imageVector = Lucide.Settings, 
-                        contentDescription = null, 
-                        modifier = Modifier.size(22.dp),
-                        tint = contentColor
-                    )
+        when (val state = uiState) {
+            MineUiState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    LaishengLoading(strokeWidth = 2.dp)
                 }
             }
-        }
-        HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
-    }
-}
 
-@Composable
-fun ProfileHeader(
-    user: User, 
-    followCounts: FollowCounts,
-    mutualCount: Int,
-    onStatClick: (String, String) -> Unit,
-    onEditClick: () -> Unit
-) {
-    val context = LocalContext.current
-    
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // 封面高度调整为 240.dp (稍微减小，更紧凑)
-        Box(modifier = Modifier.fillMaxWidth().height(240.dp)) {
-            AsyncImage(
-                model = NetworkModule.formatUrl(user.bgImage) ?: "https://picsum.photos/1000/500",
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-            // 渐变遮罩，增强文字可读性
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)),
-                            startY = 0f,
-                            endY = Float.POSITIVE_INFINITY
-                        )
-                    )
-            )
-        }
+            is MineUiState.Error -> {
+                MineErrorState(
+                    message = state.message,
+                    onRetry = { viewModel.loadData(userId) }
+                )
+            }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .offset(y = (-40).dp)
-                .padding(horizontal = 20.dp)
-        ) {
-            Column {
-                Row(
-                    verticalAlignment = Alignment.Bottom,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    // 头像 (带边框和阴影)
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(4.dp, MaterialTheme.colorScheme.surface),
-                        shadowElevation = 4.dp,
-                        modifier = Modifier.size(90.dp)
+            is MineUiState.Success -> {
+                Scaffold(
+                    containerColor = Color.Transparent,
+                    contentWindowInsets = WindowInsets(0.dp)
+                ) { innerPadding ->
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .hazeSource(state = hazeState),
+                        contentPadding = PaddingValues(
+                            top = innerPadding.calculateTopPadding() + 104.dp,
+                            bottom = paddingValues.calculateBottomPadding() + 28.dp
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(NetworkModule.formatUrl(user.avatar))
-                                .decoderFactory(SvgDecoder.Factory())
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = "Avatar",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.width(16.dp))
-                    
-                    // 关注/粉丝数据 (移到头像右侧，更紧凑)
-                    Row(
-                        modifier = Modifier.padding(bottom = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        StatItem(count = followCounts.followingCount, label = "关注") { onStatClick("following", "关注") }
-                        Spacer(modifier = Modifier.width(24.dp))
-                        StatItem(count = followCounts.followersCount, label = "粉丝") { onStatClick("followers", "粉丝") }
-                        Spacer(modifier = Modifier.width(24.dp))
-                        StatItem(count = mutualCount, label = "好友") { onStatClick("mutual", "好友") }
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // 昵称与编辑按钮
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = user.nickname, 
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 24.sp),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        if (!user.handle.isNullOrBlank()) {
-                            Text(
-                                text = "@${user.handle.replace("@", "")}", 
-                                style = MaterialTheme.typography.bodyMedium, 
-                                color = MaterialTheme.colorScheme.outline
+                        item {
+                            MineHeroSection(
+                                user = state.user,
+                                onEditClick = {
+                                    onEditClick(
+                                        state.user.nickname,
+                                        state.user.handle,
+                                        state.user.bio ?: "",
+                                        state.user.avatar,
+                                        state.user.bgImage,
+                                        state.user.handleLastUpdatedAt
+                                    )
+                                }
+                            )
+                        }
+
+                        item {
+                            MineStatsSection(
+                                publishedCount = state.moments.size,
+                                followersCount = state.followCounts.followersCount,
+                                followingCount = state.followCounts.followingCount,
+                                collectionsCount = state.collectedMoments.size,
+                                onFollowersClick = { onFollowClick(userId, "粉丝", "followers") },
+                                onFollowingClick = { onFollowClick(userId, "关注", "following") }
+                            )
+                        }
+
+                        item {
+                            MinePrimaryActions(
+                                momentsCount = state.moments.size,
+                                likedCount = state.likedMoments.size,
+                                collectedCount = state.collectedMoments.size,
+                                onOpenMoments = onOpenMoments,
+                                onOpenLikes = onOpenLikes,
+                                onOpenCollections = onOpenCollections,
+                                onEditClick = {
+                                    onEditClick(
+                                        state.user.nickname,
+                                        state.user.handle,
+                                        state.user.bio ?: "",
+                                        state.user.avatar,
+                                        state.user.bgImage,
+                                        state.user.handleLastUpdatedAt
+                                    )
+                                }
+                            )
+                        }
+
+                        item {
+                            MineFutureActions()
+                        }
+
+                        item {
+                            MinePreviewSection(
+                                title = "最近发布",
+                                moments = state.moments.take(3),
+                                emptyText = "还没有发布内容",
+                                onMomentClick = onMomentClick
                             )
                         }
                     }
-                    
-                    Button(
-                        onClick = onEditClick,
-                        shape = RoundedCornerShape(20.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        ),
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 0.dp),
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Text("编辑资料", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    }
                 }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                // Bio
-                Text(
-                    text = user.bio ?: "还没有写个性签名哦", 
-                    style = MaterialTheme.typography.bodyMedium, 
-                    lineHeight = 20.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                MinePinnedTopBar(
+                    hazeState = hazeState,
+                    themeMode = themeMode,
+                    onThemeToggle = {
+                        val newMode = if (themeMode == 2) 1 else 2
+                        mainViewModel.setThemeMode(newMode)
+                    },
+                    onSettingsClick = onSettingsClick
                 )
             }
         }
@@ -455,25 +197,467 @@ fun ProfileHeader(
 }
 
 @Composable
-fun StatItem(count: Int, label: String, onClick: () -> Unit) {
+private fun MinePinnedTopBar(
+    hazeState: HazeState,
+    themeMode: Int,
+    onThemeToggle: () -> Unit,
+    onSettingsClick: () -> Unit
+) {
+    val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+
     Column(
-        modifier = Modifier.clickable(
-            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-            indication = null, 
-            onClick = onClick
-        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin())
+            .background(backgroundColor)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .height(56.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "我的",
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold)
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                TopActionChip(
+                    icon = if (themeMode == 2) AppIcons.Sun else AppIcons.Moon,
+                    onClick = onThemeToggle
+                )
+                TopActionChip(
+                    icon = AppIcons.Settings,
+                    onClick = onSettingsClick
+                )
+            }
+        }
+        HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
+    }
+}
+
+@Composable
+private fun TopActionChip(
+    icon: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f)
+    ) {
+        Box(
+            modifier = Modifier
+                .clickable(onClick = onClick)
+                .padding(12.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            AppIcon(glyph = icon, tint = MaterialTheme.colorScheme.onSurface, size = 18.dp)
+        }
+    }
+}
+
+@Composable
+private fun MineHeroSection(
+    user: User,
+    onEditClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val backgroundUrl = NetworkModule.formatUrl(user.bgImage)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(30.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(360.dp)
+        ) {
+            if (backgroundUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(backgroundUrl)
+                        .decoderFactory(SvgDecoder.Factory())
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                DefaultTextureBackground()
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.12f),
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.42f),
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.96f)
+                            )
+                        )
+                    )
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 22.dp),
+                verticalArrangement = Arrangement.Bottom
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(NetworkModule.formatUrl(user.avatar))
+                        .decoderFactory(SvgDecoder.Factory())
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Avatar",
+                    modifier = Modifier
+                        .size(84.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentScale = ContentScale.Crop
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Text(
+                    text = user.nickname,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 29.sp
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = user.handle,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                if (!user.bio.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = user.bio,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    user.ipLocation?.takeIf { it.isNotBlank() }?.let { MetaPill(it) }
+                    MetaPill("资料已同步")
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Button(
+                    onClick = onEditClick,
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.onSurface,
+                        contentColor = MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    AppIcon(glyph = AppIcons.Edit, tint = MaterialTheme.colorScheme.surface, size = 16.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("编辑资料")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DefaultTextureBackground() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFFF3F0E9),
+                        Color(0xFFE9EDF8),
+                        Color(0xFFF5F4EF)
+                    )
+                )
+            )
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val stripeColor = Color.White.copy(alpha = 0.28f)
+            var x = -size.height
+            while (x < size.width * 1.5f) {
+                drawLine(
+                    color = stripeColor,
+                    start = Offset(x, 0f),
+                    end = Offset(x + size.height, size.height),
+                    strokeWidth = 18f
+                )
+                x += 80f
+            }
+        }
+    }
+}
+
+@Composable
+private fun MineStatsSection(
+    publishedCount: Int,
+    followersCount: Int,
+    followingCount: Int,
+    collectionsCount: Int,
+    onFollowersClick: () -> Unit,
+    onFollowingClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            StatCell(value = publishedCount.toString(), label = "发布", modifier = Modifier.weight(1f))
+            StatCell(value = followersCount.toString(), label = "粉丝", modifier = Modifier.weight(1f).clickable(onClick = onFollowersClick))
+            StatCell(value = followingCount.toString(), label = "关注", modifier = Modifier.weight(1f).clickable(onClick = onFollowingClick))
+            StatCell(value = collectionsCount.toString(), label = "收藏", modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun StatCell(
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = count.toString(), 
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold, 
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = label, 
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.outline
-        )
+        Text(text = value, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun MinePrimaryActions(
+    momentsCount: Int,
+    likedCount: Int,
+    collectedCount: Int,
+    onOpenMoments: () -> Unit,
+    onOpenLikes: () -> Unit,
+    onOpenCollections: () -> Unit,
+    onEditClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("常用入口", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            ActionCard(Modifier.weight(1f), "我的发布", momentsCount.toString(), AppIcons.List, onOpenMoments)
+            ActionCard(Modifier.weight(1f), "我的喜欢", likedCount.toString(), AppIcons.Heart, onOpenLikes)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            ActionCard(Modifier.weight(1f), "收藏夹", collectedCount.toString(), AppIcons.Bookmark, onOpenCollections)
+            ActionCard(Modifier.weight(1f), "编辑资料", "管理", AppIcons.Edit, onEditClick)
+        }
+    }
+}
+
+@Composable
+private fun MineFutureActions() {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("即将加入", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PlaceholderCard(Modifier.weight(1f), "足迹", "预留", AppIcons.Explore)
+            PlaceholderCard(Modifier.weight(1f), "桌面小组件", "预留", AppIcons.Home)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PlaceholderCard(Modifier.weight(1f), "会员", "预留", AppIcons.Star)
+            PlaceholderCard(Modifier.weight(1f), "更多功能", "后续", AppIcons.More)
+        }
+    }
+}
+
+@Composable
+private fun ActionCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    value: String,
+    icon: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)),
+                contentAlignment = Alignment.Center
+            ) {
+                AppIcon(glyph = icon, tint = MaterialTheme.colorScheme.onSurface, size = 18.dp)
+            }
+            Spacer(modifier = Modifier.height(18.dp))
+            Text(title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun PlaceholderCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    value: String,
+    icon: String
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f))
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
+            ) {
+                AppIcon(glyph = icon, tint = MaterialTheme.colorScheme.onSurfaceVariant, size = 18.dp)
+            }
+            Spacer(modifier = Modifier.height(18.dp))
+            Text(title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun MinePreviewSection(
+    title: String,
+    moments: List<Moment>,
+    emptyText: String,
+    onMomentClick: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+            Spacer(modifier = Modifier.height(6.dp))
+            Text("点击内容可进入详情页。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(14.dp))
+
+            if (moments.isEmpty()) {
+                Text(emptyText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                moments.forEachIndexed { index, moment ->
+                    PreviewRow(moment = moment, onClick = { onMomentClick(moment.id) })
+                    if (index != moments.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PreviewRow(
+    moment: Moment,
+    onClick: () -> Unit
+) {
+    val previewText = buildString {
+        append(moment.content.text?.takeIf { it.isNotBlank() } ?: "暂无正文")
+        if (!moment.content.attachments.isNullOrEmpty()) append(" · 含附件")
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(previewText, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = listOfNotNull(moment.userIpLocation, moment.ipLocation).firstOrNull() ?: "点击查看详情",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        AppIcon(glyph = AppIcons.ArrowRight, tint = MaterialTheme.colorScheme.onSurfaceVariant, size = 18.dp)
+    }
+}
+
+@Composable
+private fun MetaPill(text: String) {
+    AssistChip(
+        onClick = {},
+        label = { Text(text) },
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+        ),
+        border = null
+    )
+}
+
+@Composable
+private fun MineErrorState(
+    message: String,
+    onRetry: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("页面加载失败", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onRetry) { Text("重新加载") }
+        }
     }
 }

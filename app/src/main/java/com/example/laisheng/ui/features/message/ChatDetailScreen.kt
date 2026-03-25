@@ -48,6 +48,7 @@ fun ChatDetailScreen(
     val myAvatar by viewModel.myAvatar.collectAsState()
     var text by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val messageCount = (uiState as? ChatDetailUiState.Success)?.messages?.size ?: 0
 
     // 预先处理好格式化后的 URL，避免在列表渲染时重复计算
     val formattedOtherAvatar = remember(otherAvatarUrl) { NetworkModule.formatUrl(otherAvatarUrl) }
@@ -57,12 +58,9 @@ fun ChatDetailScreen(
         viewModel.loadHistory(userId, otherId)
     }
 
-    LaunchedEffect(uiState) {
-        if (uiState is ChatDetailUiState.Success) {
-            val messages = (uiState as ChatDetailUiState.Success).messages
-            if (messages.isNotEmpty()) {
-                listState.animateScrollToItem(messages.size - 1)
-            }
+    LaunchedEffect(messageCount) {
+        if (messageCount > 0) {
+            listState.animateScrollToItem(messageCount - 1)
         }
     }
 
@@ -116,7 +114,8 @@ fun ChatDetailScreen(
                     val isEnabled = text.isNotBlank()
                     IconButton(
                         onClick = {
-                            viewModel.sendMessage(userId, otherId, text)
+                            val draft = text
+                            viewModel.sendMessage(userId, otherId, draft)
                             text = ""
                         },
                         enabled = isEnabled,

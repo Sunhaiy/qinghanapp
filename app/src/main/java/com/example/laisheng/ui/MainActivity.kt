@@ -31,7 +31,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.composables.icons.lucide.*
 import com.example.laisheng.data.local.UserPrefs
 import com.example.laisheng.data.remote.SocketManager
 import com.example.laisheng.ui.navigation.Route
@@ -41,12 +40,16 @@ import com.example.laisheng.ui.features.home.HomeScreen
 import com.example.laisheng.ui.features.login.LoginScreen
 import com.example.laisheng.ui.features.message.ChatDetailScreen
 import com.example.laisheng.ui.features.message.MessageScreen
+import com.example.laisheng.ui.features.mine.MineTab
+import com.example.laisheng.ui.features.mine.MineTabDetailScreen
 import com.example.laisheng.ui.features.mine.MineScreen
 import com.example.laisheng.ui.features.mine.UserProfileScreen
 import com.example.laisheng.ui.features.mine.edit.EditProfileScreen
 import com.example.laisheng.ui.features.mine.follows.FollowScreen
 import com.example.laisheng.ui.features.post.PostScreen
 import com.example.laisheng.ui.features.settings.SettingsScreen
+import com.example.laisheng.ui.theme.AppIcon
+import com.example.laisheng.ui.theme.AppIcons
 import com.example.laisheng.ui.theme.LaishengTheme
 
 import dev.chrisbanes.haze.HazeState
@@ -112,6 +115,7 @@ fun Laisheng(mainViewModel: MainViewModel) {
                                  currentRoute?.startsWith("chat") == true ||
                                  currentRoute?.startsWith("follows") == true ||
                                  currentRoute?.startsWith("edit_profile") == true ||
+                                 currentRoute?.startsWith("mine_tab") == true ||
                                  currentRoute?.startsWith("user_profile") == true ||
                                  currentRoute == Route.Settings.route || 
                                  currentRoute == Route.Post.route ||
@@ -130,6 +134,7 @@ fun Laisheng(mainViewModel: MainViewModel) {
                                  currentRoute?.startsWith("chat") == true ||
                                  currentRoute?.startsWith("follows") == true ||
                                  currentRoute?.startsWith("edit_profile") == true ||
+                                 currentRoute?.startsWith("mine_tab") == true ||
                                  currentRoute?.startsWith("user_profile") == true ||
                                  currentRoute == "settings" || 
                                  currentRoute == Route.Post.route ||
@@ -195,7 +200,31 @@ fun Laisheng(mainViewModel: MainViewModel) {
                             onSettingsClick = { 
                                 navController.navigate("settings")
                             },
+                            onOpenMoments = { navController.navigate("mine_tab/moments") },
+                            onOpenLikes = { navController.navigate("mine_tab/likes") },
+                            onOpenCollections = { navController.navigate("mine_tab/collections") },
                             mainViewModel = mainViewModel
+                        )
+                    }
+                    composable("mine_tab/{tab}", listOf(navArgument("tab") { type = NavType.StringType })) { backStackEntry ->
+                        val tabArg = backStackEntry.arguments?.getString("tab") ?: "moments"
+                        val tab = when (tabArg) {
+                            "likes" -> MineTab.LIKED
+                            "collections" -> MineTab.COLLECTED
+                            else -> MineTab.MOMENTS
+                        }
+                        val title = when (tab) {
+                            MineTab.MOMENTS -> "我的发布"
+                            MineTab.LIKED -> "我的喜欢"
+                            MineTab.COLLECTED -> "收藏夹"
+                        }
+                        MineTabDetailScreen(
+                            hazeState = hazeState,
+                            userId = userId,
+                            title = title,
+                            tab = tab,
+                            onBack = { navController.popBackStack() },
+                            onMomentClick = { id -> navController.navigate("moment_detail/$id") }
                         )
                     }
                     composable("moment_detail/{momentId}", listOf(navArgument("momentId") { type = NavType.StringType })) { backStackEntry ->
@@ -342,14 +371,20 @@ fun BottomNavigation(hazeState: HazeState, navController: NavController, items: 
                                 modifier = Modifier.size(40.dp),
                                 shape = CircleShape, color = primaryColor, shadowElevation = 4.dp
                             ) {
-                                Icon(Lucide.Plus, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(8.dp))
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    AppIcon(
+                                        glyph = AppIcons.Add,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        size = 22.dp
+                                    )
+                                }
                             }
                         } else {
-                            Icon(
-                                imageVector = if (isSelected) screen.selectedIcon else screen.unselectedIcon,
-                                contentDescription = null,
+                            AppIcon(
+                                glyph = if (isSelected) screen.selectedIcon else screen.unselectedIcon,
                                 tint = iconColor,
-                                modifier = Modifier.size(24.dp).scale(iconScale)
+                                modifier = Modifier.scale(iconScale),
+                                size = 24.dp
                             )
                         }
                     }
@@ -381,11 +416,11 @@ fun TopBar(hazeState: HazeState, currentRoute: String?, onSearchClick: () -> Uni
             when (currentRoute) {
                 Route.Home.route -> Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(text = "来声", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = contentColor)
-                    IconButton(onClick = {}) { Icon(imageVector = Lucide.Bell, contentDescription = null, tint = contentColor) }
+                    IconButton(onClick = {}) { AppIcon(glyph = AppIcons.Bell, tint = contentColor, size = 22.dp) }
                 }
                 Route.Explore.route -> Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(text = "探索", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = contentColor)
-                    IconButton(onClick = onSearchClick) { Icon(imageVector = Lucide.Search, contentDescription = null, tint = contentColor) }
+                    IconButton(onClick = onSearchClick) { AppIcon(glyph = AppIcons.Search, tint = contentColor, size = 22.dp) }
                 }
                 else -> {
                     val title = itemsList.find { it.route == currentRoute }?.title ?: "来声"

@@ -1,54 +1,59 @@
 package com.example.laisheng.ui.navigation
 
-import androidx.compose.ui.graphics.vector.ImageVector
-import com.composables.icons.lucide.*
+import com.example.laisheng.ui.theme.AppIcons
 
 sealed class Route(
     val route: String,
     val title: String,
-    val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector
+    val selectedIcon: String,
+    val unselectedIcon: String
 ) {
     object Home : Route(
         route = "home",
         title = "首页",
-        selectedIcon = Lucide.House,
-        unselectedIcon = Lucide.House
+        selectedIcon = AppIcons.Home,
+        unselectedIcon = AppIcons.Home
     )
+
     object Explore : Route(
         route = "explore",
         title = "探索",
-        selectedIcon = Lucide.Compass,
-        unselectedIcon = Lucide.Compass
+        selectedIcon = AppIcons.Explore,
+        unselectedIcon = AppIcons.Explore
     )
+
     object Post : Route(
         route = "post",
         title = "发布",
-        selectedIcon = Lucide.Plus,
-        unselectedIcon = Lucide.Plus
+        selectedIcon = AppIcons.Add,
+        unselectedIcon = AppIcons.Add
     )
+
     object Message : Route(
         route = "message",
         title = "消息",
-        selectedIcon = Lucide.MessageCircle,
-        unselectedIcon = Lucide.MessageCircle
+        selectedIcon = AppIcons.Message,
+        unselectedIcon = AppIcons.Message
     )
+
     object Mine : Route(
         route = "mine",
         title = "我的",
-        selectedIcon = Lucide.User,
-        unselectedIcon = Lucide.User
+        selectedIcon = AppIcons.User,
+        unselectedIcon = AppIcons.User
     )
+
     object Search : Route(
         route = "search",
         title = "搜索",
-        selectedIcon = Lucide.Search,
-        unselectedIcon = Lucide.Search
+        selectedIcon = AppIcons.Search,
+        unselectedIcon = AppIcons.Search
     )
+
     object Settings : Route(
         route = "settings",
         title = "设置",
-        selectedIcon = Lucide.Settings,
-        unselectedIcon = Lucide.Settings
+        selectedIcon = AppIcons.Settings,
+        unselectedIcon = AppIcons.Settings
     )
 }

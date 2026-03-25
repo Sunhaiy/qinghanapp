@@ -1,12 +1,13 @@
 package com.example.laisheng.data.remote
 
+import com.example.laisheng.BuildConfig
 import com.example.laisheng.data.remote.ApiService
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object NetworkModule {
-    // 局域网 IP
-    const val BASE_URL = "http://192.168.1.2:3000/"
+    // 从构建配置读取后端地址，可在 local.properties 配置 backend.base.url 覆盖
+    val BASE_URL: String = BuildConfig.BASE_URL
 
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
