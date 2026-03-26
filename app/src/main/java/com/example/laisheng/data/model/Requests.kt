@@ -2,26 +2,41 @@ package com.example.laisheng.data.model
 
 import com.google.gson.annotations.SerializedName
 
-// 发布瞬间的请求体
 data class CreateMomentRequest(
     @SerializedName("user_id") val userId: String,
-    val content: MomentContent // 修改这里：改为 MomentContent 对象以适配 JSONB
+    val content: MomentContent
 )
 
-// 点赞/收藏请求体
-data class ToggleRequest(
-    @SerializedName("user_id") val userId: String,
+data class DeleteMomentRequest(
+    @SerializedName("user_id") val userId: String
+)
+
+data class MomentActionRequest(
     @SerializedName("moment_id") val momentId: String
 )
 
-// 评论请求体
 data class CommentRequest(
-    @SerializedName("user_id") val userId: String,
     @SerializedName("moment_id") val momentId: String,
     val content: String
 )
 
-// 评论返回实体
+data class FollowToggleRequest(
+    @SerializedName("followingId") val followingId: String
+)
+
+data class FolderCreateRequest(
+    val name: String
+)
+
+data class MoveCollectionRequest(
+    val folderId: String?
+)
+
+data class HistoryViewRequest(
+    @SerializedName("moment_id") val momentId: String,
+    val source: String
+)
+
 data class Comment(
     val id: String,
     @SerializedName("user_id") val userId: String,

@@ -1,7 +1,6 @@
 package com.example.laisheng.data.remote
 
 import android.util.Log
-import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.ChatMessage
 import com.google.gson.Gson
 import io.socket.client.IO
@@ -13,8 +12,7 @@ import org.json.JSONObject
 object SocketManager {
     private var socket: Socket? = null
     private val gson = Gson()
-    
-    // 使用 SharedFlow 实现多路广播，全 App 都能收到新消息
+
     private val _messageFlow = MutableSharedFlow<ChatMessage>(extraBufferCapacity = 64)
     val messageFlow = _messageFlow.asSharedFlow()
 
@@ -26,7 +24,7 @@ object SocketManager {
                 forceNew = true
                 reconnection = true
             }
-            
+
             socket = IO.socket(NetworkModule.BASE_URL, opts)
 
             socket?.on(Socket.EVENT_CONNECT) {
@@ -35,12 +33,11 @@ object SocketManager {
             }
 
             socket?.on("new_message") { args ->
-                val data = args[0]
+                val data = args.firstOrNull() ?: return@on
                 try {
                     val messageJson = if (data is JSONObject) data.toString() else data.toString()
-                    val chatMessage = gson.fromJson(messageJson, ChatMessage::class.java)
+                    val chatMessage = gson.fromJson(messageJson, ChatMessage::class.java) ?: return@on
                     Log.d("SocketManager", "Broadcast new message: ${chatMessage.content.text}")
-                    // 将新消息发射到流中
                     _messageFlow.tryEmit(chatMessage)
                 } catch (e: Exception) {
                     e.printStackTrace()

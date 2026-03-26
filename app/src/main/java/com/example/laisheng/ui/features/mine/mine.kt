@@ -29,12 +29,15 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,6 +59,7 @@ import com.example.laisheng.data.model.User
 import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.ui.MainViewModel
 import com.example.laisheng.ui.components.LaishengLoading
+import com.example.laisheng.ui.components.UserAvatar
 import com.example.laisheng.ui.theme.AppIcon
 import com.example.laisheng.ui.theme.AppIcons
 import dev.chrisbanes.haze.HazeState
@@ -75,14 +79,21 @@ fun MineScreen(
     onOpenMoments: () -> Unit,
     onOpenLikes: () -> Unit,
     onOpenCollections: () -> Unit,
+    onOpenHistory: () -> Unit,
+    onOpenMembership: () -> Unit,
     viewModel: MineViewModel = viewModel(),
     mainViewModel: MainViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val themeMode by mainViewModel.themeMode.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) viewModel.loadData(userId)
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.message.collect { snackbarHostState.showSnackbar(it) }
     }
 
     Box(
@@ -98,16 +109,14 @@ fun MineScreen(
             }
 
             is MineUiState.Error -> {
-                MineErrorState(
-                    message = state.message,
-                    onRetry = { viewModel.loadData(userId) }
-                )
+                MineErrorState(message = state.message, onRetry = { viewModel.loadData(userId) })
             }
 
             is MineUiState.Success -> {
                 Scaffold(
                     containerColor = Color.Transparent,
-                    contentWindowInsets = WindowInsets(0.dp)
+                    contentWindowInsets = WindowInsets(0.dp),
+                    snackbarHost = { SnackbarHost(snackbarHostState) }
                 ) { innerPadding ->
                     LazyColumn(
                         modifier = Modifier
@@ -126,7 +135,7 @@ fun MineScreen(
                                     onEditClick(
                                         state.user.nickname,
                                         state.user.handle,
-                                        state.user.bio ?: "",
+                                        state.user.bio.orEmpty(),
                                         state.user.avatar,
                                         state.user.bgImage,
                                         state.user.handleLastUpdatedAt
@@ -158,7 +167,7 @@ fun MineScreen(
                                     onEditClick(
                                         state.user.nickname,
                                         state.user.handle,
-                                        state.user.bio ?: "",
+                                        state.user.bio.orEmpty(),
                                         state.user.avatar,
                                         state.user.bgImage,
                                         state.user.handleLastUpdatedAt
@@ -168,7 +177,10 @@ fun MineScreen(
                         }
 
                         item {
-                            MineFutureActions()
+                            MineFutureActions(
+                                onOpenHistory = onOpenHistory,
+                                onOpenMembership = onOpenMembership
+                            )
                         }
 
                         item {
@@ -203,14 +215,11 @@ private fun MinePinnedTopBar(
     onThemeToggle: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
-    val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)
-    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin())
-            .background(backgroundColor)
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
     ) {
         Row(
             modifier = Modifier
@@ -230,21 +239,15 @@ private fun MinePinnedTopBar(
                     icon = if (themeMode == 2) AppIcons.Sun else AppIcons.Moon,
                     onClick = onThemeToggle
                 )
-                TopActionChip(
-                    icon = AppIcons.Settings,
-                    onClick = onSettingsClick
-                )
+                TopActionChip(icon = AppIcons.Settings, onClick = onSettingsClick)
             }
         }
-        HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
+        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     }
 }
 
 @Composable
-private fun TopActionChip(
-    icon: String,
-    onClick: () -> Unit
-) {
+private fun TopActionChip(icon: String, onClick: () -> Unit) {
     Surface(
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f)
@@ -315,18 +318,13 @@ private fun MineHeroSection(
                     .padding(horizontal = 20.dp, vertical = 22.dp),
                 verticalArrangement = Arrangement.Bottom
             ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(NetworkModule.formatUrl(user.avatar))
-                        .decoderFactory(SvgDecoder.Factory())
-                        .crossfade(true)
-                        .build(),
+                UserAvatar(
+                    avatar = user.avatar,
                     contentDescription = "Avatar",
                     modifier = Modifier
                         .size(84.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentScale = ContentScale.Crop
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                 )
 
                 Spacer(modifier = Modifier.height(18.dp))
@@ -342,7 +340,7 @@ private fun MineHeroSection(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = user.handle,
+                    text = "@${user.handle.removePrefix("@")}",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -446,11 +444,7 @@ private fun MineStatsSection(
 }
 
 @Composable
-private fun StatCell(
-    value: String,
-    label: String,
-    modifier: Modifier = Modifier
-) {
+private fun StatCell(value: String, label: String, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -488,18 +482,21 @@ private fun MinePrimaryActions(
 }
 
 @Composable
-private fun MineFutureActions() {
+private fun MineFutureActions(
+    onOpenHistory: () -> Unit,
+    onOpenMembership: () -> Unit
+) {
     Column(
         modifier = Modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("即将加入", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+        Text("更多功能", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PlaceholderCard(Modifier.weight(1f), "足迹", "预留", AppIcons.Explore)
+            ActionCard(Modifier.weight(1f), "足迹", "记录", AppIcons.Explore, onOpenHistory)
             PlaceholderCard(Modifier.weight(1f), "桌面小组件", "预留", AppIcons.Home)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PlaceholderCard(Modifier.weight(1f), "会员", "预留", AppIcons.Star)
+            ActionCard(Modifier.weight(1f), "会员", "套餐", AppIcons.Star, onOpenMembership)
             PlaceholderCard(Modifier.weight(1f), "更多功能", "后续", AppIcons.More)
         }
     }
@@ -583,7 +580,11 @@ private fun MinePreviewSection(
         Column(modifier = Modifier.padding(18.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
             Spacer(modifier = Modifier.height(6.dp))
-            Text("点击内容可进入详情页。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "点击内容可进入详情页。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(modifier = Modifier.height(14.dp))
 
             if (moments.isEmpty()) {
@@ -604,10 +605,7 @@ private fun MinePreviewSection(
 }
 
 @Composable
-private fun PreviewRow(
-    moment: Moment,
-    onClick: () -> Unit
-) {
+private fun PreviewRow(moment: Moment, onClick: () -> Unit) {
     val previewText = buildString {
         append(moment.content.text?.takeIf { it.isNotBlank() } ?: "暂无正文")
         if (!moment.content.attachments.isNullOrEmpty()) append(" · 含附件")
@@ -647,10 +645,7 @@ private fun MetaPill(text: String) {
 }
 
 @Composable
-private fun MineErrorState(
-    message: String,
-    onRetry: () -> Unit
-) {
+private fun MineErrorState(message: String, onRetry: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("页面加载失败", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))

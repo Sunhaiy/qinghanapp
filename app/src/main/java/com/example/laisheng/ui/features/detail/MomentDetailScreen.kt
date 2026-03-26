@@ -5,7 +5,20 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -13,37 +26,50 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
-import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.Comment
+import com.example.laisheng.ui.components.LaishengLoading
 import com.example.laisheng.ui.components.PostCard
+import com.example.laisheng.ui.components.UserAvatar
 import com.example.laisheng.ui.features.mine.MoveToFolderDialog
-
 import com.example.laisheng.ui.theme.Dimens
 
-import com.example.laisheng.ui.components.LaishengLoading
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MomentDetailScreen(
     momentId: String,
     userId: String,
     onBack: () -> Unit,
-    onUserClick: (String) -> Unit, // Add callback
+    onUserClick: (String) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: MomentDetailViewModel = viewModel()
@@ -52,15 +78,13 @@ fun MomentDetailScreen(
     val folders by viewModel.folders.collectAsState()
     var commentText by remember { mutableStateOf("") }
     var showMoveDialog by remember { mutableStateOf(false) }
-    
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(momentId) {
+    LaunchedEffect(momentId, userId) {
         viewModel.loadMomentDetail(momentId, userId)
         viewModel.loadFolders(userId)
     }
 
-    // Snackbar event handling
     LaunchedEffect(viewModel) {
         viewModel.snackbarEvent.collect { event ->
             val result = snackbarHostState.showSnackbar(
@@ -77,7 +101,7 @@ fun MomentDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("瞬间详情", fontSize = 18.sp) },
+                title = { Text("瞬间详情", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "返回")
@@ -86,24 +110,21 @@ fun MomentDetailScreen(
             )
         },
         bottomBar = {
-            Surface(
-                tonalElevation = 2.dp,
-                modifier = Modifier.navigationBarsPadding()
-            ) {
+            Surface(modifier = Modifier.navigationBarsPadding(), tonalElevation = 1.dp) {
                 Row(
                     modifier = Modifier
-                        .padding(horizontal = Dimens.PaddingMedium, vertical = Dimens.PaddingSmall)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .padding(horizontal = Dimens.PaddingMedium, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextField(
                         value = commentText,
                         onValueChange = { commentText = it },
-                        placeholder = { Text("说点什么吧...") },
+                        placeholder = { Text("写一条评论...") },
                         modifier = Modifier.weight(1f),
                         colors = TextFieldDefaults.colors(
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedContainerColor = Color.Transparent
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent
                         )
                     )
                     IconButton(
@@ -117,19 +138,33 @@ fun MomentDetailScreen(
                     }
                 }
             }
-
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        contentWindowInsets = WindowInsets(0.dp)
     ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
             when (val state = uiState) {
-                is MomentDetailUiState.Loading -> {
+                MomentDetailUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         LaishengLoading()
                     }
                 }
+
+                is MomentDetailUiState.Error -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(state.message, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+
                 is MomentDetailUiState.Success -> {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
                         item {
                             with(sharedTransitionScope) {
                                 PostCard(
@@ -138,9 +173,11 @@ fun MomentDetailScreen(
                                         rememberSharedContentState(key = "item-${state.moment.id}"),
                                         animatedVisibilityScope = animatedVisibilityScope
                                     ),
-                                    onUserClick = { onUserClick(state.moment.userId) }, // Wire up
+                                    onCardClick = {},
+                                    onUserClick = { onUserClick(state.moment.userId) },
                                     onLikeClick = { viewModel.onLikeClick(userId, state.moment.id) },
-                                    onBookmarkClick = { 
+                                    onCommentClick = {},
+                                    onBookmarkClick = {
                                         viewModel.onBookmarkClick(userId, state.moment.id) {
                                             showMoveDialog = true
                                         }
@@ -150,76 +187,85 @@ fun MomentDetailScreen(
                         }
 
                         item {
-                            HorizontalDivider(thickness = Dimens.PaddingSmall, color = MaterialTheme.colorScheme.surfaceVariant)
-                            Text(
-                                text = "评论 (${state.comments.size})",
-                                style = MaterialTheme.typography.titleSmall,
-                                modifier = Modifier.padding(Dimens.PaddingMedium)
-                            )
+                            CommentSectionHeader(commentCount = state.comments.size)
                         }
 
-                        items(state.comments) { comment ->
-                            CommentItem(comment)
-                        }
-                        
                         if (state.comments.isEmpty()) {
-                            item {
-                                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                    Text("抢个沙发吧~", color = MaterialTheme.colorScheme.outline)
-                                }
+                            item { EmptyCommentsState() }
+                        } else {
+                            items(state.comments) { comment ->
+                                CommentItem(comment)
                             }
                         }
                     }
 
-                if (showMoveDialog) {
-                     com.example.laisheng.ui.features.mine.MoveToFolderDialog(
-                        folders = folders,
-                        onDismiss = { showMoveDialog = false },
-                        onSelectFolder = { folderId: String? ->
-                            viewModel.confirmCollection(userId, state.moment.id, folderId)
-                            showMoveDialog = false
-                        }
-                    )
-                }
-            }
-            is MomentDetailUiState.Error -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(state.message, color = MaterialTheme.colorScheme.error)
-                }
-            }
+                    if (showMoveDialog) {
+                        MoveToFolderDialog(
+                            folders = folders,
+                            onDismiss = { showMoveDialog = false },
+                            onSelectFolder = { folderId ->
+                                viewModel.confirmCollection(userId, state.moment.id, folderId)
+                                showMoveDialog = false
+                            }
+                        )
+                    }
                 }
             }
         }
     }
+}
 
+@Composable
+private fun CommentSectionHeader(commentCount: Int) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+        Text(
+            text = "评论",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+        )
+        Spacer(modifier = Modifier.size(4.dp))
+        Text(
+            text = "共 $commentCount 条评论",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun EmptyCommentsState() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "还没有评论，来做第一个互动的人。",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
 
 @Composable
 fun CommentItem(comment: Comment) {
-    val context = LocalContext.current
-    
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { /* Handle comment click */ }
-                .padding(horizontal = Dimens.PaddingMedium, vertical = Dimens.PaddingSmall)
+                .clickable { }
+                .padding(horizontal = Dimens.PaddingMedium, vertical = Dimens.PaddingSmall),
+            verticalAlignment = Alignment.Top
         ) {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(NetworkModule.formatUrl(comment.avatar))
-                    .decoderFactory(SvgDecoder.Factory())
-                    .build(),
-                contentDescription = null,
+            UserAvatar(
+                avatar = comment.avatar,
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(38.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentScale = ContentScale.Crop
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             )
-            
             Spacer(modifier = Modifier.width(Dimens.PaddingMedium))
-            
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -228,8 +274,7 @@ fun CommentItem(comment: Comment) {
                     Text(
                         text = comment.nickname ?: "未知用户",
                         style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = if (comment.createdAt.contains("T")) comment.createdAt.substringBefore("T") else comment.createdAt,
@@ -237,9 +282,7 @@ fun CommentItem(comment: Comment) {
                         color = MaterialTheme.colorScheme.outline
                     )
                 }
-                
-                Spacer(modifier = Modifier.height(2.dp))
-                
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = comment.content,
                     style = MaterialTheme.typography.bodyMedium,
@@ -249,8 +292,8 @@ fun CommentItem(comment: Comment) {
             }
         }
         HorizontalDivider(
-            modifier = Modifier.padding(start = 60.dp), // Align divider with text start
-            thickness = 0.5.dp, 
+            modifier = Modifier.padding(start = 68.dp),
+            thickness = 0.5.dp,
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
         )
     }

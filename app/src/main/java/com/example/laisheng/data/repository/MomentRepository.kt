@@ -1,265 +1,359 @@
 package com.example.laisheng.data.repository
 
-import com.example.laisheng.data.model.*
+import com.example.laisheng.data.model.ChatListItem
+import com.example.laisheng.data.model.ChatMessage
+import com.example.laisheng.data.model.CollectionFolder
+import com.example.laisheng.data.model.Comment
+import com.example.laisheng.data.model.CommentRequest
+import com.example.laisheng.data.model.CreateMomentRequest
+import com.example.laisheng.data.model.FolderCreateRequest
+import com.example.laisheng.data.model.FollowCounts
+import com.example.laisheng.data.model.FollowToggleRequest
+import com.example.laisheng.data.model.HistoryResponse
+import com.example.laisheng.data.model.HistoryViewRequest
+import com.example.laisheng.data.model.MembershipActivateRequest
+import com.example.laisheng.data.model.MembershipOrder
+import com.example.laisheng.data.model.MembershipPlan
+import com.example.laisheng.data.model.MembershipStatus
+import com.example.laisheng.data.model.Moment
+import com.example.laisheng.data.model.MomentActionRequest
+import com.example.laisheng.data.model.MomentResponse
+import com.example.laisheng.data.model.MoveCollectionRequest
+import com.example.laisheng.data.model.SendMessageRequest
+import com.example.laisheng.data.model.MessageContent
+import com.example.laisheng.data.model.UploadResponse
+import com.example.laisheng.data.model.User
+import com.example.laisheng.data.model.toUserOrNull
 import com.example.laisheng.data.remote.ApiService
 import okhttp3.MultipartBody
+import retrofit2.HttpException
+
+class ApiMessageException(message: String) : Exception(message)
 
 class MomentRepository(private val apiService: ApiService) {
 
-    // 1.登录逻辑
-    suspend fun login(handle: String, password: String): User? {
-        return try {
-            apiService.login(mapOf("handle" to handle, "password" to password))
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    // 2. 获取用户资料
-    suspend fun getUserProfile(userId: String, currentUserId: String? = null): User? {
-        return try {
-            apiService.getUser(userId, currentUserId)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    // 3. 更新用户资料
-    suspend fun updateProfile(userId: String, profile: Map<String, String?>): User? {
-        return try {
-            apiService.updateProfile(userId, profile)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    // 4. 获取瞬间列表 (支持分页)
-    suspend fun getMoments(page: Int = 1, limit: Int = 10, currentUserId: String? = null): MomentResponse? {
-        return try {
-            apiService.getMoments(page, limit, currentUserId)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    // 5. 获取瞬间详情
-    suspend fun getMomentDetail(id: String, currentUserId: String? = null): Moment? {
-        return try {
-            apiService.getMomentDetail(id, currentUserId)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    // 6. 获取特定用户的瞬间列表
-    suspend fun getUserMoments(userId: String, page: Int = 1, limit: Int = 10, currentUserId: String? = null): MomentResponse? {
-        return try {
-            apiService.getUserMoments(userId, page, limit, currentUserId)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    suspend fun searchMoments(query: String, page: Int, limit: Int = 20, currentUserId: String? = null): MomentResponse? {
-        return try {
-            apiService.searchMoments(query, page, limit, currentUserId)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    
-    suspend fun getFeaturedMoments(currentUserId: String? = null): List<Moment>? {
-        return try {
-            apiService.getFeaturedMoments(currentUserId)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    suspend fun getFollowingMoments(page: Int = 1, limit: Int = 10, currentUserId: String? = null): MomentResponse? {
-        return try {
-            apiService.getFollowingMoments(page, limit, currentUserId)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    suspend fun searchUsers(query: String): List<User> {
-        return try {
-            apiService.searchUsers(query)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
-        }
-    }
-
-    // 7. 获取用户的收藏列表
-    suspend fun getUserCollections(userId: String, currentUserId: String? = null, folderId: String? = null): List<Moment> {
-        return try {
-            apiService.getUserCollections(userId, currentUserId, folderId)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
-        }
-    }
-
-    // --- 收藏夹管理 ---
-    suspend fun createFolder(userId: String, name: String): CollectionFolder? {
-        return try {
-            apiService.createFolder(mapOf("userId" to userId, "name" to name))
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    suspend fun getFolders(userId: String): List<CollectionFolder> {
-        return try {
-            apiService.getFolders(userId)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
-        }
-    }
-
-    suspend fun deleteFolder(id: String, userId: String): Boolean {
-        return try {
-            apiService.deleteFolder(id, mapOf("userId" to userId))
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    suspend fun moveCollectionToFolder(momentId: String, userId: String, folderId: String?): Boolean {
-        return try {
-            apiService.moveCollectionToFolder(momentId, mapOf("userId" to userId, "folderId" to folderId))
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    // 8. 获取用户点赞列表
-    suspend fun getUserLikedMoments(userId: String, currentUserId: String? = null): List<Moment> {
-        return try {
-            apiService.getUserLikedMoments(userId, currentUserId)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
-        }
-    }
-
-    // 9. 点赞切换逻辑
-    suspend fun toggleLike(userId: String, momentId: String): Boolean {
-        return try {
-            val response = apiService.toggleLike(ToggleRequest(userId, momentId))
-            response["liked"] ?: false
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    // 10. 收藏切换逻辑
-    suspend fun toggleCollection(userId: String, momentId: String): Boolean {
-        return try {
-            val response = apiService.toggleCollection(ToggleRequest(userId, momentId))
-            response["collected"] ?: false
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    // 11. 获取瞬间评论列表
-    suspend fun getMomentComments(momentId: String): List<Comment> {
-        return try {
-            apiService.getMomentComments(momentId)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
-        }
-    }
-
-    // 12. 发表评论
-    suspend fun postComment(userId: String, momentId: String, content: String): Comment? {
-        return try {
-            apiService.postComment(CommentRequest(userId, momentId, content))
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    // 13. 获取关注/粉丝数
-    suspend fun getFollowCounts(userId: String): FollowCounts? {
-        return try {
-            apiService.getFollowCounts(userId)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    // 14. 获取互关好友列表
-    suspend fun getMutualFollowing(userId: String): List<User> {
-        return try {
-            apiService.getMutualFollowing(userId)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
-        }
-    }
-
-    // 15. 获取聊天列表
-    suspend fun getChatList(userId: String): List<ChatListItem> {
-        return try {
-            apiService.getChatList(userId)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
-        }
-    }
-
-    // 16. 获取聊天历史记录
-    suspend fun getChatHistory(userId1: String, userId2: String, page: Int = 1): List<ChatMessage> {
-        return try {
-            apiService.getChatHistory(userId1, userId2, page)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
-        }
-    }
-
-    // 17. 发送私信
-    suspend fun sendMessage(senderId: String, receiverId: String, text: String): ChatMessage? {
-        return try {
-            val request = SendMessageRequest(
-                senderId = senderId,
-                receiverId = receiverId,
-                content = MessageContent(text = text, type = "text")
+    suspend fun login(handle: String, password: String): User? =
+        try {
+            val response = apiService.login(
+                mapOf("handle" to handle.trim().removePrefix("@"), "password" to password)
             )
-            apiService.sendMessage(request)
-        } catch (e: Exception) {
-            e.printStackTrace()
+            response.user ?: response.toUserOrNull()
+        } catch (_: Exception) {
             null
+        }
+
+    suspend fun getCurrentUser(): User? =
+        try {
+            apiService.getMe()
+        } catch (_: Exception) {
+            null
+        }
+
+    suspend fun getUserProfile(userId: String, currentUserId: String? = null): User? =
+        try {
+            if (currentUserId != null && currentUserId == userId) {
+                apiService.getMe()
+            } else {
+                apiService.getUser(userId, currentUserId)
+            }
+        } catch (_: Exception) {
+            null
+        }
+
+    suspend fun updateProfile(userId: String, profile: Map<String, String?>): User? =
+        try {
+            apiService.updateProfile(userId, profile)
+        } catch (_: Exception) {
+            null
+        }
+
+    suspend fun getMoments(page: Int = 1, limit: Int = 10, currentUserId: String? = null): MomentResponse? =
+        try {
+            apiService.getMoments(page, limit, currentUserId)
+        } catch (_: Exception) {
+            null
+        }
+
+    suspend fun getMomentDetail(id: String, currentUserId: String? = null): Moment? =
+        try {
+            apiService.getMomentDetail(id, currentUserId)
+        } catch (_: Exception) {
+            null
+        }
+
+    suspend fun getUserMoments(
+        userId: String,
+        page: Int = 1,
+        limit: Int = 10,
+        currentUserId: String? = null
+    ): MomentResponse? =
+        try {
+            apiService.getUserMoments(userId, page, limit, currentUserId)
+        } catch (_: Exception) {
+            null
+        }
+
+    suspend fun searchMoments(
+        query: String,
+        page: Int,
+        limit: Int = 20,
+        currentUserId: String? = null
+    ): MomentResponse? =
+        try {
+            apiService.searchMoments(query, page, limit, currentUserId)
+        } catch (_: Exception) {
+            null
+        }
+
+    suspend fun getFeaturedMoments(currentUserId: String? = null): List<Moment>? =
+        try {
+            apiService.getFeaturedMoments(currentUserId)
+        } catch (_: Exception) {
+            null
+        }
+
+    suspend fun getFollowingMoments(
+        page: Int = 1,
+        limit: Int = 10,
+        currentUserId: String? = null
+    ): MomentResponse? =
+        try {
+            currentUserId?.let { apiService.getFollowingMoments(page, limit, it) }
+        } catch (_: Exception) {
+            null
+        }
+
+    suspend fun searchUsers(query: String): List<User> =
+        try {
+            apiService.searchUsers(query)
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+    suspend fun getUserCollections(
+        userId: String,
+        currentUserId: String? = null,
+        folderId: String? = null
+    ): List<Moment> =
+        try {
+            if (currentUserId != null && userId == currentUserId) {
+                apiService.getMyCollections(folderId).value
+            } else {
+                emptyList()
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+    suspend fun createFolder(name: String): CollectionFolder {
+        try {
+            return apiService.createFolder(FolderCreateRequest(name))
+        } catch (e: HttpException) {
+            throw ApiMessageException(extractErrorMessage(e))
         }
     }
 
-    // 18. 上传文件
-    suspend fun uploadFile(file: MultipartBody.Part): UploadResponse? {
-        return try {
-            apiService.uploadFile(file)
-        } catch (e: Exception) {
-            e.printStackTrace()
+    suspend fun getFolders(userId: String? = null): List<CollectionFolder> =
+        try {
+            apiService.getFolders().value
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+    suspend fun deleteFolder(id: String, userId: String? = null): Boolean =
+        try {
+            apiService.deleteFolder(id)
+            true
+        } catch (_: Exception) {
+            false
+        }
+
+    suspend fun moveCollectionToFolder(momentId: String, userId: String? = null, folderId: String?): Boolean =
+        try {
+            apiService.moveCollectionToFolder(momentId, MoveCollectionRequest(folderId))
+            true
+        } catch (_: Exception) {
+            false
+        }
+
+    suspend fun getUserLikedMoments(userId: String? = null, currentUserId: String? = null): List<Moment> =
+        try {
+            apiService.getMyLikedMoments().value
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+    suspend fun toggleLike(userId: String? = null, momentId: String): Boolean =
+        try {
+            apiService.toggleLike(MomentActionRequest(momentId)).liked ?: false
+        } catch (_: Exception) {
+            false
+        }
+
+    suspend fun toggleCollection(userId: String? = null, momentId: String): Boolean =
+        try {
+            apiService.toggleCollection(MomentActionRequest(momentId)).collected ?: false
+        } catch (_: Exception) {
+            false
+        }
+
+    suspend fun getMomentComments(momentId: String): List<Comment> =
+        try {
+            apiService.getMomentComments(momentId)
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+    suspend fun postComment(userId: String? = null, momentId: String, content: String): Comment? =
+        try {
+            apiService.postComment(CommentRequest(momentId, content))
+        } catch (_: Exception) {
             null
+        }
+
+    suspend fun getFollowCounts(userId: String? = null): FollowCounts? =
+        try {
+            apiService.getFollowCounts()
+        } catch (_: Exception) {
+            null
+        }
+
+    suspend fun getFollowers(): List<User> =
+        try {
+            apiService.getFollowers().value
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+    suspend fun getFollowing(): List<User> =
+        try {
+            apiService.getFollowing().value
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+    suspend fun getMutualFollowing(userId: String? = null): List<User> =
+        try {
+            apiService.getMutualFollowing().value
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+    suspend fun toggleFollow(targetUserId: String): Boolean =
+        try {
+            apiService.toggleFollow(FollowToggleRequest(targetUserId)).followed ?: false
+        } catch (_: Exception) {
+            false
+        }
+
+    suspend fun getChatList(userId: String? = null): List<ChatListItem> =
+        try {
+            apiService.getChatList().value
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+    suspend fun getChatHistory(userId1: String? = null, userId2: String, page: Int = 1): List<ChatMessage> =
+        try {
+            apiService.getChatHistory(userId2, page = page).value
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+    suspend fun sendMessage(senderId: String? = null, receiverId: String, text: String): ChatMessage? =
+        try {
+            apiService.sendMessage(
+                SendMessageRequest(
+                    receiverId = receiverId,
+                    content = MessageContent(text = text, type = "text")
+                )
+            )
+        } catch (_: Exception) {
+            null
+        }
+
+    suspend fun getUnreadMessages(): Int =
+        try {
+            apiService.getUnreadMessages().unreadCount
+        } catch (_: Exception) {
+            0
+        }
+
+    suspend fun getMembershipPlans(): List<MembershipPlan> =
+        try {
+            apiService.getMembershipPlans().value
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+    suspend fun getMembershipStatus(): MembershipStatus? =
+        try {
+            apiService.getMembershipStatus()
+        } catch (_: Exception) {
+            null
+        }
+
+    suspend fun activateMembership(planCode: String): MembershipStatus? =
+        try {
+            apiService.activateMembership(MembershipActivateRequest(planCode))
+        } catch (_: Exception) {
+            null
+        }
+
+    suspend fun getMembershipOrders(): List<MembershipOrder> =
+        try {
+            apiService.getMembershipOrders().value
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+    suspend fun recordHistoryView(momentId: String, source: String = "detail"): Boolean =
+        try {
+            apiService.recordHistoryView(HistoryViewRequest(momentId, source))
+            true
+        } catch (_: Exception) {
+            false
+        }
+
+    suspend fun getHistory(page: Int = 1, limit: Int = 20): HistoryResponse? =
+        try {
+            apiService.getHistory(page, limit)
+        } catch (_: Exception) {
+            null
+        }
+
+    suspend fun deleteHistory(momentId: String): Boolean =
+        try {
+            apiService.deleteHistoryItem(momentId)
+            true
+        } catch (_: Exception) {
+            false
+        }
+
+    suspend fun clearHistory(): Boolean =
+        try {
+            apiService.clearHistory()
+            true
+        } catch (_: Exception) {
+            false
+        }
+
+    suspend fun uploadFile(file: MultipartBody.Part): UploadResponse? =
+        try {
+            apiService.uploadFile(file)
+        } catch (_: Exception) {
+            null
+        }
+
+    private fun extractErrorMessage(exception: HttpException): String {
+        val body = exception.response()?.errorBody()?.string().orEmpty()
+        return when {
+            body.contains("folder", ignoreCase = true) && body.contains("limit", ignoreCase = true) ->
+                "达到会员限制"
+            body.contains("会员限制") -> "达到会员限制"
+            body.contains("达到会员限制") -> "达到会员限制"
+            body.isNotBlank() -> body
+            else -> "请求失败"
         }
     }
 }

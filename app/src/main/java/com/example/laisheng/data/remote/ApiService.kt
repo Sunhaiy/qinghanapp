@@ -1,20 +1,56 @@
 package com.example.laisheng.data.remote
 
-import com.example.laisheng.data.model.*
+import com.example.laisheng.data.model.AuthResponse
+import com.example.laisheng.data.model.ChatListItem
+import com.example.laisheng.data.model.ChatMessage
+import com.example.laisheng.data.model.CollectionFolder
+import com.example.laisheng.data.model.Comment
+import com.example.laisheng.data.model.CommentRequest
+import com.example.laisheng.data.model.CreateMomentRequest
+import com.example.laisheng.data.model.DeleteMomentRequest
+import com.example.laisheng.data.model.FolderCreateRequest
+import com.example.laisheng.data.model.FollowCounts
+import com.example.laisheng.data.model.FollowToggleRequest
+import com.example.laisheng.data.model.HistoryResponse
+import com.example.laisheng.data.model.HistoryViewRequest
+import com.example.laisheng.data.model.ListEnvelope
+import com.example.laisheng.data.model.MembershipActivateRequest
+import com.example.laisheng.data.model.MembershipOrder
+import com.example.laisheng.data.model.MembershipPlan
+import com.example.laisheng.data.model.MembershipStatus
+import com.example.laisheng.data.model.Moment
+import com.example.laisheng.data.model.MomentActionRequest
+import com.example.laisheng.data.model.MomentResponse
+import com.example.laisheng.data.model.MoveCollectionRequest
+import com.example.laisheng.data.model.SendMessageRequest
+import com.example.laisheng.data.model.ToggleResult
+import com.example.laisheng.data.model.UnreadCountResponse
+import com.example.laisheng.data.model.UploadResponse
+import com.example.laisheng.data.model.User
 import okhttp3.MultipartBody
-import retrofit2.http.*
+import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.GET
+import retrofit2.http.HTTP
+import retrofit2.http.Multipart
+import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Part
+import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface ApiService {
-
-    // --- 用户相关 ---
     @POST("api/users/login")
-    suspend fun login(@Body request: Map<String, String>): User
+    suspend fun login(@Body request: Map<String, String>): AuthResponse
 
     @POST("api/users/register")
-    suspend fun register(@Body request: Map<String, String>): User
+    suspend fun register(@Body request: Map<String, String>): AuthResponse
+
+    @GET("api/users/me")
+    suspend fun getMe(): User
 
     @POST("api/users/heartbeat")
-    suspend fun heartbeat(@Body request: Map<String, String>): Map<String, Any>
+    suspend fun heartbeat(@Body request: Map<String, String> = emptyMap()): Map<String, Any>
 
     @GET("api/users/{id}")
     suspend fun getUser(
@@ -28,7 +64,9 @@ interface ApiService {
         @Body profile: Map<String, String?>
     ): User
 
-    // --- 瞬间 (Moments) 相关 ---
+    @GET("api/users/search")
+    suspend fun searchUsers(@Query("q") query: String): List<User>
+
     @GET("api/moments")
     suspend fun getMoments(
         @Query("page") page: Int? = 1,
@@ -55,7 +93,7 @@ interface ApiService {
         @Query("q") query: String,
         @Query("page") page: Int,
         @Query("limit") limit: Int,
-        @Query("current_user_id") currentUserId: String?
+        @Query("current_user_id") currentUserId: String? = null
     ): MomentResponse
 
     @GET("api/moments/featured")
@@ -67,95 +105,119 @@ interface ApiService {
     suspend fun getFollowingMoments(
         @Query("page") page: Int? = 1,
         @Query("limit") limit: Int? = 10,
-        @Query("current_user_id") currentUserId: String? = null
+        @Query("current_user_id") currentUserId: String
     ): MomentResponse
-
-    @GET("api/users/search")
-    suspend fun searchUsers(
-        @Query("q") query: String
-    ): List<User>
 
     @POST("api/moments")
     suspend fun createMoment(@Body request: CreateMomentRequest): Moment
 
-    // --- 互动相关 (点赞/收藏) ---
-    @POST("api/likes/toggle")
-    suspend fun toggleLike(@Body request: ToggleRequest): Map<String, Boolean>
-
-    @POST("api/collections/toggle")
-    suspend fun toggleCollection(@Body request: ToggleRequest): Map<String, Boolean>
-
-    @GET("api/collections/user/{userId}")
-    suspend fun getUserCollections(
-        @Path("userId") userId: String,
-        @Query("current_user_id") currentUserId: String? = null,
-        @Query("folderId") folderId: String? = null
-    ): List<Moment>
-
-    @GET("api/likes/user/{userId}")
-    suspend fun getUserLikedMoments(
-        @Path("userId") userId: String,
-        @Query("current_user_id") currentUserId: String? = null
-    ): List<Moment>
-
-    // --- 收藏夹管理 ---
-    @POST("api/collections/folders")
-    suspend fun createFolder(@Body request: Map<String, String>): CollectionFolder
-
-    @GET("api/collections/folders")
-    suspend fun getFolders(@Query("userId") userId: String): List<CollectionFolder>
-
-    @DELETE("api/collections/folders/{id}")
-    suspend fun deleteFolder(@Path("id") id: String, @Body request: Map<String, String>): CollectionFolder
-
-    @PUT("api/collections/{id}")
-    suspend fun moveCollectionToFolder(
+    @HTTP(method = "DELETE", path = "api/moments/{id}", hasBody = true)
+    suspend fun deleteMoment(
         @Path("id") id: String,
-        @Body request: Map<String, String?> // userId, folderId
+        @Body request: DeleteMomentRequest
     ): Map<String, Any>
 
-    // --- 关注相关 ---
-    @POST("api/follows/toggle")
-    suspend fun toggleFollow(@Body request: Map<String, String>): Map<String, Boolean>
-
-    @GET("api/follows/counts/{userId}")
-    suspend fun getFollowCounts(@Path("userId") userId: String): FollowCounts
-
-    @GET("api/follows/followers/{userId}")
-    suspend fun getFollowers(@Path("userId") userId: String): List<User>
-
-    @GET("api/follows/following/{userId}")
-    suspend fun getFollowing(@Path("userId") userId: String): List<User>
-
-    @GET("api/follows/mutual/{userId}")
-    suspend fun getMutualFollowing(@Path("userId") userId: String): List<User>
-
-    // --- 评论相关 ---
     @POST("api/comments")
     suspend fun postComment(@Body request: CommentRequest): Comment
 
     @GET("api/comments/moment/{momentId}")
     suspend fun getMomentComments(@Path("momentId") momentId: String): List<Comment>
 
-    // --- 私信相关 ---
+    @POST("api/likes/toggle")
+    suspend fun toggleLike(@Body request: MomentActionRequest): ToggleResult
+
+    @GET("api/likes/user/me")
+    suspend fun getMyLikedMoments(): ListEnvelope<Moment>
+
+    @POST("api/follows/toggle")
+    suspend fun toggleFollow(@Body request: FollowToggleRequest): ToggleResult
+
+    @GET("api/follows/counts")
+    suspend fun getFollowCounts(): FollowCounts
+
+    @GET("api/follows/followers")
+    suspend fun getFollowers(): ListEnvelope<User>
+
+    @GET("api/follows/following")
+    suspend fun getFollowing(): ListEnvelope<User>
+
+    @GET("api/follows/mutual")
+    suspend fun getMutualFollowing(): ListEnvelope<User>
+
+    @POST("api/collections/toggle")
+    suspend fun toggleCollection(@Body request: MomentActionRequest): ToggleResult
+
+    @GET("api/collections/user/me")
+    suspend fun getMyCollections(@Query("folderId") folderId: String? = null): ListEnvelope<Moment>
+
+    @GET("api/collections/folders")
+    suspend fun getFolders(): ListEnvelope<CollectionFolder>
+
+    @POST("api/collections/folders")
+    suspend fun createFolder(@Body request: FolderCreateRequest): CollectionFolder
+
+    @DELETE("api/collections/folders/{id}")
+    suspend fun deleteFolder(@Path("id") id: String): Map<String, Any>
+
+    @PUT("api/collections/{id}")
+    suspend fun moveCollectionToFolder(
+        @Path("id") id: String,
+        @Body request: MoveCollectionRequest
+    ): Map<String, Any>
+
     @POST("api/messages")
     suspend fun sendMessage(@Body request: SendMessageRequest): ChatMessage
 
-    @GET("api/messages/chat-list/{userId}")
-    suspend fun getChatList(@Path("userId") userId: String): List<ChatListItem>
+    @GET("api/messages/chat-list")
+    suspend fun getChatList(): ListEnvelope<ChatListItem>
 
-    @GET("api/messages/history/{userId1}/{userId2}")
+    @GET("api/messages/history/{userId2}")
     suspend fun getChatHistory(
-        @Path("userId1") userId1: String,
         @Path("userId2") userId2: String,
         @Query("page") page: Int? = 1,
-        @Query("limit") limit: Int? = 50
-    ): List<ChatMessage>
+        @Query("limit") limit: Int? = 20
+    ): ListEnvelope<ChatMessage>
 
-    // --- 上传相关 ---
+    @GET("api/messages/unread")
+    suspend fun getUnreadMessages(): UnreadCountResponse
+
+    @GET("api/notifications")
+    suspend fun getNotifications(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): ListEnvelope<Map<String, Any>>
+
+    @GET("api/notifications/unread")
+    suspend fun getUnreadNotifications(): UnreadCountResponse
+
+    @GET("api/membership/plans")
+    suspend fun getMembershipPlans(): ListEnvelope<MembershipPlan>
+
+    @GET("api/membership/me")
+    suspend fun getMembershipStatus(): MembershipStatus
+
+    @POST("api/membership/activate")
+    suspend fun activateMembership(@Body request: MembershipActivateRequest): MembershipStatus
+
+    @GET("api/membership/orders")
+    suspend fun getMembershipOrders(): ListEnvelope<MembershipOrder>
+
+    @POST("api/history/view")
+    suspend fun recordHistoryView(@Body request: HistoryViewRequest): Map<String, Any>
+
+    @GET("api/history")
+    suspend fun getHistory(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): HistoryResponse
+
+    @DELETE("api/history/{momentId}")
+    suspend fun deleteHistoryItem(@Path("momentId") momentId: String): Map<String, Any>
+
+    @DELETE("api/history")
+    suspend fun clearHistory(): Map<String, Any>
+
     @Multipart
     @POST("api/upload/single")
-    suspend fun uploadFile(
-        @Part file: MultipartBody.Part
-    ): UploadResponse
+    suspend fun uploadFile(@Part file: MultipartBody.Part): UploadResponse
 }

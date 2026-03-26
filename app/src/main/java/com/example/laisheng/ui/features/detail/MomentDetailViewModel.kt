@@ -43,6 +43,7 @@ class MomentDetailViewModel(application: Application) : AndroidViewModel(applica
                 val moment = repository.getMomentDetail(momentId, currentUserId)
                 val comments = repository.getMomentComments(momentId)
                 if (moment != null) {
+                    repository.recordHistoryView(momentId, "detail")
                     _uiState.value = MomentDetailUiState.Success(moment, comments)
                 } else {
                     _uiState.value = MomentDetailUiState.Error("找不到该瞬间")

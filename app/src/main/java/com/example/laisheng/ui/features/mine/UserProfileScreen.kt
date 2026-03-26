@@ -1,10 +1,21 @@
 package com.example.laisheng.ui.features.mine
 
-import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -12,41 +23,48 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.laisheng.data.model.FollowCounts
 import com.example.laisheng.data.model.User
 import com.example.laisheng.data.remote.NetworkModule
+import com.example.laisheng.ui.components.LaishengLoading
 import com.example.laisheng.ui.components.PostCard
-import com.example.laisheng.ui.theme.Dimens
-import com.composables.icons.lucide.Lucide
-import com.composables.icons.lucide.MessageCircle
+import com.example.laisheng.ui.components.UserAvatar
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.HazeMaterials
 
-import com.example.laisheng.ui.components.LaishengLoading
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserProfileScreen(
     userId: String,
@@ -54,81 +72,90 @@ fun UserProfileScreen(
     onBack: () -> Unit,
     onChatClick: (String, String, String?) -> Unit,
     onMomentClick: (String) -> Unit,
-    onFollowClick: (String, String, String) -> Unit, // userId, title, type
+    onFollowClick: (String, String, String) -> Unit,
     viewModel: UserProfileViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
     val hazeState = remember { HazeState() }
-    
-    // Scroll state for dynamic top bar
     val listState = rememberLazyListState()
-    val density = LocalDensity.current
-    val thresholdPx = with(density) { 200.dp.toPx() } // Start transitions after banner
-    
-    val scrollOffset by remember {
-        derivedStateOf {
-            if (listState.firstVisibleItemIndex > 0) thresholdPx 
-            else listState.firstVisibleItemScrollOffset.toFloat()
+    val collapsed by remember {
+        androidx.compose.runtime.derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 80
         }
     }
-    
-    // Calculate animation fraction (0f to 1f)
-    val expandFraction by remember {
-        derivedStateOf {
-            (scrollOffset / thresholdPx).coerceIn(0f, 1f)
-        }
-    }
-    
-    val showTopBarContent by remember { derivedStateOf { expandFraction > 0.8f } }
 
-    LaunchedEffect(userId) {
+    LaunchedEffect(userId, currentUserId) {
         viewModel.loadProfile(userId, currentUserId)
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentWindowInsets = WindowInsets(0.dp)
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
             when (val state = uiState) {
-                is UserProfileUiState.Loading -> {
-                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                UserProfileUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         LaishengLoading()
                     }
                 }
+
+                is UserProfileUiState.Error -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(state.message, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+
                 is UserProfileUiState.Success -> {
                     val user = state.user
-                    
+
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize().hazeSource(state = hazeState),
-                        contentPadding = PaddingValues(bottom = Dimens.PaddingLarge)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .hazeSource(state = hazeState),
+                        contentPadding = PaddingValues(bottom = paddingValues.calculateBottomPadding() + 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(18.dp)
                     ) {
                         item {
-                            ProfileHeaderSection(
+                            VisitorProfileHeader(
                                 user = user,
-                                isMe = user.id == currentUserId,
                                 followCounts = state.followCounts,
-                                onFollowClick = { viewModel.toggleFollow(user.id, currentUserId) },
                                 onChatClick = { onChatClick(user.id, user.nickname, user.avatar) },
-                                onStatClick = { type, title -> onFollowClick(user.id, title, type) }
+                                onFollowToggle = { viewModel.toggleFollow(user.id, currentUserId) },
+                                onFollowersClick = { onFollowClick(user.id, "粉丝", "followers") },
+                                onFollowingClick = { onFollowClick(user.id, "关注", "following") }
                             )
                         }
-                        
+
                         item {
-                            HorizontalDivider(
-                                thickness = 8.dp, 
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            )
+                            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                Text(
+                                    text = "个人瞬间",
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "公开动态 ${state.moments.size} 条",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
 
                         if (state.moments.isEmpty()) {
                             item {
                                 Box(
-                                    modifier = Modifier.fillMaxWidth().padding(Dimens.PaddingLarge),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 24.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("还没有任何动态", color = MaterialTheme.colorScheme.outline)
+                                    Text(
+                                        text = "这个用户还没有公开瞬间",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         } else {
@@ -136,106 +163,25 @@ fun UserProfileScreen(
                                 PostCard(
                                     moment = moment,
                                     onCardClick = { onMomentClick(moment.id) },
-                                    onUserClick = { /* Already on profile */ },
+                                    onUserClick = {},
                                     onLikeClick = { viewModel.onLikeClick(currentUserId, moment.id) },
                                     onBookmarkClick = { viewModel.onBookmarkClick(currentUserId, moment.id) },
                                     onCommentClick = { onMomentClick(moment.id) }
                                 )
-                                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                            }
-                        }
-                    }
-                    
-                    // --- Dynamic Top Bar ---
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp) // Covers status bar + toolbar area roughly
-                    ) {
-                        // 1. Dynamic Background Layer (Fades in)
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .alpha(expandFraction)
-                                .hazeEffect(state = hazeState, style = HazeMaterials.regular())
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)) 
-                        )
-                        
-                        // 2. Content Layer (Always visible, items change color)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .statusBarsPadding()
-                                .padding(horizontal = 4.dp), // Adjust padding
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            // Back Button
-                            IconButton(onClick = onBack) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack, 
-                                    contentDescription = "返回",
-                                    // Transition from White (on image) to OnSurface (on background)
-                                    tint = androidx.compose.ui.graphics.lerp(
-                                        Color.White, 
-                                        MaterialTheme.colorScheme.onSurface, 
-                                        expandFraction
-                                    )
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
                                 )
                             }
-                            
-                            // Title (Fades in)
-                            Text(
-                                text = user.nickname,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.alpha(expandFraction),
-                                maxLines = 1,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                        }
+                    }
 
-                            // Right Actions
-                            Row {
-                                if (showTopBarContent) {
-                                    IconButton(onClick = { /* TODO: More actions */ }) {
-                                        Icon(
-                                            imageVector = Icons.Default.MoreVert,
-                                            contentDescription = "更多",
-                                            tint = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                } else {
-                                     // Placeholder to balance the row if needed, or just empty
-                                     Spacer(modifier = Modifier.size(48.dp))
-                                }
-                            }
-                        }
-                        
-                        // Divider (Optional, fades in)
-                        if (expandFraction > 0.9f) {
-                             HorizontalDivider(
-                                modifier = Modifier.align(Alignment.BottomCenter),
-                                thickness = 0.5.dp, 
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                            )
-                        }
-                    }
-                }
-                is UserProfileUiState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = state.message, color = MaterialTheme.colorScheme.error)
-                         // Still show back button on error
-                        IconButton(
-                            onClick = onBack,
-                             modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .statusBarsPadding()
-                                .padding(16.dp)
-                                .background(Color.Black.copy(alpha = 0.3f), CircleShape)
-                        ) {
-                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = Color.White)
-                        }
-                    }
+                    VisitorTopBar(
+                        hazeState = hazeState,
+                        collapsed = collapsed,
+                        title = user.nickname,
+                        onBack = onBack
+                    )
                 }
             }
         }
@@ -243,173 +189,220 @@ fun UserProfileScreen(
 }
 
 @Composable
-fun ProfileHeaderSection(
-    user: User,
-    isMe: Boolean,
-    followCounts: com.example.laisheng.data.model.FollowCounts,
-    onFollowClick: () -> Unit,
-    onChatClick: () -> Unit,
-    onStatClick: (String, String) -> Unit // type, title
+private fun VisitorTopBar(
+    hazeState: HazeState,
+    collapsed: Boolean,
+    title: String,
+    onBack: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // 1. Banner & Avatar Container
-        // 1. Banner & Avatar Container
-        Box(modifier = Modifier.fillMaxWidth()) {
-            // Banner
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin())
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = if (collapsed) 0.9f else 0.08f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .height(56.dp)
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "返回",
+                    tint = if (collapsed) MaterialTheme.colorScheme.onSurface else Color.White
+                )
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.alpha(if (collapsed) 1f else 0f)
+            )
+            IconButton(onClick = {}) {
+                Icon(
+                    Icons.Default.MoreHoriz,
+                    contentDescription = "更多",
+                    tint = if (collapsed) MaterialTheme.colorScheme.onSurface else Color.White
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun VisitorProfileHeader(
+    user: User,
+    followCounts: FollowCounts,
+    onChatClick: () -> Unit,
+    onFollowToggle: () -> Unit,
+    onFollowersClick: () -> Unit,
+    onFollowingClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val bgUrl = remember(user.bgImage) { NetworkModule.formatUrl(user.bgImage) }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        if (!bgUrl.isNullOrBlank()) {
             AsyncImage(
-                model = NetworkModule.formatUrl(user.bgImage) ?: "https://picsum.photos/1000/500",
+                model = ImageRequest.Builder(context).data(bgUrl).crossfade(true).build(),
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp),
+                    .height(188.dp),
                 contentScale = ContentScale.Crop
             )
-            
-            // Avatar (Overlapping)
+        } else {
             Box(
                 modifier = Modifier
-                    .padding(top = 160.dp, start = Dimens.PaddingLarge) // 200 - 40 (half avatar) = 160 start
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .border(4.dp, MaterialTheme.colorScheme.surface, CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(NetworkModule.formatUrl(user.avatar))
-                        .decoderFactory(coil.decode.SvgDecoder.Factory())
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
-
-            // Actions (Right aligned, aligned with bottom of Avatar/Box)
-            if (!isMe) {
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = Dimens.PaddingLarge, bottom = 0.dp) // Align with bottom of Box (which is bottom of Avatar)
-                        .height(40.dp), // Height matches button height roughly
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                     IconButton(
-                        onClick = onChatClick,
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
-                            .size(40.dp)
-                            .border(1.dp, MaterialTheme.colorScheme.surface, CircleShape)
-                    ) {
-                        Icon(Icons.Default.Email, contentDescription = "私信", tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                    }
-                    
-                    Spacer(modifier = Modifier.width(Dimens.PaddingMedium))
-
-                    Button(
-                        onClick = onFollowClick,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (user.isFollowed == true) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
-                            contentColor = if (user.isFollowed == true) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimary
-                        ),
-                        shape = RoundedCornerShape(50),
-                        modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.surface, RoundedCornerShape(50))
-                    ) {
-                        Text(text = if (user.isFollowed == true) "已关注" else "关注")
-                    }
-                }
-            }
+                    .fillMaxWidth()
+                    .height(188.dp)
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.32f),
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.22f),
+                                MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        )
+                    )
+            )
         }
-        
-        // 2. Info Section
-        Column(
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Dimens.PaddingLarge)
-                .padding(top = Dimens.PaddingSmall) // Space after avatar area
+                .height(188.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.18f),
+                            MaterialTheme.colorScheme.surface
+                        )
+                    )
+                )
+        )
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(top = 118.dp),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
-            // Actions Row moved to Box above to fix alignment
-
-
-            // Name & Handle
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp)) {
+                Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     text = user.nickname,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
                 )
-                // IP Badge
-                user.ipLocation?.let { ip ->
-                    Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text(
-                            text = ip,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-            
-            if (user.handle.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = if (user.handle.startsWith("@")) user.handle else "@${user.handle}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
+                if (!user.bio.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = user.bio,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    VisitorMetaChip(user.ipLocation ?: "未知地区")
+                    VisitorMetaChip("访客视角")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(
+                        onClick = onFollowToggle,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        Text(if (user.isFollowed == true) "已关注" else "关注")
+                    }
+                    Button(
+                        onClick = onChatClick,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    ) {
+                        Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("发消息")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    VisitorStat("粉丝", followCounts.followersCount.toString(), onFollowersClick)
+                    VisitorStat("关注", followCounts.followingCount.toString(), onFollowingClick)
+                    VisitorStat("状态", if (user.isFollowed == true) "已关注" else "未关注", {})
+                }
             }
-            
-            Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
-            
-            // Bio
-            if (!user.bio.isNullOrBlank()) {
-                Text(
-                    text = user.bio,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
-            }
-            
-            // Stats
-            Row(modifier = Modifier.fillMaxWidth()) {
-                ProfileStatItem(count = followCounts.followersCount, label = "粉丝") { onStatClick("followers", "粉丝") }
-                Spacer(modifier = Modifier.width(Dimens.PaddingLarge))
-                ProfileStatItem(count = followCounts.followingCount, label = "关注") { onStatClick("following", "关注") }
-            }
-            
-            Spacer(modifier = Modifier.height(Dimens.PaddingLarge))
         }
+
+        UserAvatar(
+            avatar = user.avatar,
+            modifier = Modifier
+                .padding(start = 34.dp, top = 90.dp)
+                .size(76.dp)
+                .background(MaterialTheme.colorScheme.surface, CircleShape)
+        )
     }
 }
 
 @Composable
-private fun ProfileStatItem(count: Int, label: String, onClick: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.Bottom,
-        modifier = Modifier.clickable(
-            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-            indication = null,
-            onClick = onClick
-        )
+private fun VisitorMetaChip(text: String) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
     ) {
         Text(
-            text = count.toString(),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            text = text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.width(4.dp))
+    }
+}
+
+@Composable
+private fun VisitorStat(label: String, value: String, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier.clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.outline
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

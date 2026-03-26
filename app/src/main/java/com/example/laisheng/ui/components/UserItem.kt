@@ -11,16 +11,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
 import com.example.laisheng.data.model.User
-import com.example.laisheng.data.remote.NetworkModule
 
 @Composable
 fun UserItem(
@@ -29,7 +23,6 @@ fun UserItem(
     showActionButton: Boolean = true,
     actionButtonContent: @Composable (() -> Unit)? = null
 ) {
-    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -37,17 +30,12 @@ fun UserItem(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(NetworkModule.formatUrl(user.avatar))
-                .decoderFactory(SvgDecoder.Factory())
-                .build(),
-            contentDescription = null,
+        UserAvatar(
+            avatar = user.avatar,
             modifier = Modifier
                 .size(50.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentScale = ContentScale.Crop
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         )
         
         Spacer(modifier = Modifier.width(16.dp))

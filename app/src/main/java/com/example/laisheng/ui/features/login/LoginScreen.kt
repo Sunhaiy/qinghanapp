@@ -29,7 +29,7 @@ fun LoginScreen(
 ) {
     var isRegisterMode by remember { mutableStateOf(false) }
 
-    var handle by remember { mutableStateOf("@") }
+    var handle by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var nickname by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -37,8 +37,10 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(uiState) {
-        if (uiState is LoginUiState.Success) {
-            onLoginSuccess((uiState as LoginUiState.Success).user.id)
+        val successState = uiState as? LoginUiState.Success
+        val userId = successState?.user?.id
+        if (!userId.isNullOrBlank()) {
+            onLoginSuccess(userId)
         }
     }
 
@@ -65,7 +67,7 @@ fun LoginScreen(
         // Handle 输入
         OutlinedTextField(
             value = handle,
-            onValueChange = { if (it.startsWith("@")) handle = it },
+            onValueChange = { handle = it },
             label = { Text("Handle") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -122,7 +124,7 @@ fun LoginScreen(
         Button(
             onClick = {
                 if (isRegisterMode) {
-                    viewModel.register(handle, password, nickname, "https://i.pravatar.cc/150?u=$handle")
+                    viewModel.register(handle, password, nickname, "")
                 } else {
                     viewModel.login(handle, password)
                 }

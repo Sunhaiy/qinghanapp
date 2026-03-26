@@ -23,13 +23,10 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
 import com.composables.icons.lucide.*
 
 import com.example.laisheng.data.remote.NetworkModule
@@ -50,11 +47,9 @@ fun PostCard(
     onUserClick: (String) -> Unit = {},
     onLongClick: () -> Unit = {}
 ) {
-    val context = LocalContext.current
     val nickname = moment.nickname ?: "未知用户"
     val handle = moment.handle ?: ""
     
-    val avatarUrl = remember(moment.avatar) { NetworkModule.formatUrl(moment.avatar) }
 
     // 分离语音和图片附件
     val imageAttachments = remember(moment.content.attachments) {
@@ -87,11 +82,12 @@ fun PostCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.clickable { onUserClick(moment.userId) }
             ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context).data(avatarUrl).decoderFactory(SvgDecoder.Factory()).crossfade(true).build(),
-                    contentDescription = null,
-                    modifier = Modifier.size(Dimens.AvatarSizeMedium).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentScale = ContentScale.Crop
+                UserAvatar(
+                    avatar = moment.avatar,
+                    modifier = Modifier
+                        .size(Dimens.AvatarSizeMedium)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                 )
                 Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
                 Column {

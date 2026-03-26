@@ -2,18 +2,22 @@ package com.example.laisheng.ui.features.mine
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.CollectionFolder
 import com.example.laisheng.data.model.FollowCounts
 import com.example.laisheng.data.model.Moment
 import com.example.laisheng.data.model.User
+import com.example.laisheng.data.remote.NetworkModule
+import com.example.laisheng.data.repository.ApiMessageException
 import com.example.laisheng.data.repository.MomentRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 sealed class MineUiState {
     object Loading : MineUiState()
+
     data class Success(
         val user: User,
         val moments: List<Moment>,
@@ -23,11 +27,14 @@ sealed class MineUiState {
         val mutualFriends: List<User>,
         val folders: List<CollectionFolder> = emptyList()
     ) : MineUiState()
+
     data class Error(val message: String) : MineUiState()
 }
 
 enum class MineTab {
-    MOMENTS, LIKED, COLLECTED
+    MOMENTS,
+    LIKED,
+    COLLECTED
 }
 
 class MineViewModel : ViewModel() {
@@ -45,6 +52,9 @@ class MineViewModel : ViewModel() {
     private val _selectedFolderId = MutableStateFlow<String?>(null)
     val selectedFolderId = _selectedFolderId.asStateFlow()
 
+    private val _message = MutableSharedFlow<String>()
+    val message = _message.asSharedFlow()
+
     private var currentUserId: String? = null
 
     fun selectTab(tab: MineTab) {
@@ -56,35 +66,38 @@ class MineViewModel : ViewModel() {
         viewModelScope.launch {
             if (isRefresh) _isRefreshing.value = true
             try {
-                val user = repository.getUserProfile(userId)
-                val followCounts = repository.getFollowCounts(userId) ?: FollowCounts(0, 0)
-                val mutualFriends = repository.getMutualFollowing(userId)
-                
-                // 1. 获取所有列表的原始数据
-                val momentsRaw = repository.getUserMoments(userId, currentUserId = userId)?.data ?: emptyList()
-                val likedRaw = repository.getUserLikedMoments(userId, currentUserId = userId)
-                
-                val folders = repository.getFolders(userId)
-                
-                val collectionFolderId = _selectedFolderId.value
-                val collectedRaw = repository.getUserCollections(userId, currentUserId = userId, folderId = collectionFolderId)
+                val user = repository.getCurrentUser() ?: repository.getUserProfile(userId)
+                val followCounts = repository.getFollowCounts() ?: FollowCounts(0, 0)
+                val mutualFriends = repository.getMutualFollowing()
+                val momentsRaw = repository.getUserMoments(userId, currentUserId = userId)?.data.orEmpty()
+                val likedRaw = repository.getUserLikedMoments()
+                val folders = repository.getFolders()
+                val collectedRaw = repository.getUserCollections(
+                    userId = userId,
+                    currentUserId = userId,
+                    folderId = _selectedFolderId.value
+                )
 
-                // 2. 生成已点赞和已收藏的 ID 集合，确保跨 Tab 的一致性
                 val likedIds = likedRaw.map { it.id }.toSet()
                 val collectedIds = collectedRaw.map { it.id }.toSet()
 
-                // 3. 核心修复：强制同步所有 Moment 的状态位，无论它在哪一个 Tab 列表里
-                fun sync(m: Moment) = m.copy(
-                    isLiked = likedIds.contains(m.id),
-                    isCollected = collectedIds.contains(m.id)
+                fun sync(moment: Moment) = moment.copy(
+                    isLiked = moment.id in likedIds,
+                    isCollected = moment.id in collectedIds
                 )
 
-                val moments = momentsRaw.map(::sync)
-                val liked = likedRaw.map(::sync)
-                val collected = collectedRaw.map(::sync)
-
                 if (user != null) {
-                    _uiState.value = MineUiState.Success(user, moments, liked, collected, followCounts, mutualFriends, folders)
+                    _uiState.value = MineUiState.Success(
+                        user = user,
+                        moments = momentsRaw.map(::sync),
+                        likedMoments = likedRaw.map(::sync),
+                        collectedMoments = collectedRaw.map(::sync),
+                        followCounts = followCounts,
+                        mutualFriends = mutualFriends,
+                        folders = folders
+                    )
+                } else {
+                    _uiState.value = MineUiState.Error("加载用户信息失败")
                 }
             } catch (e: Exception) {
                 _uiState.value = MineUiState.Error(e.message ?: "网络错误")
@@ -96,19 +109,15 @@ class MineViewModel : ViewModel() {
 
     fun toggleLike(momentId: String, userId: String) {
         viewModelScope.launch {
-            try {
-                repository.toggleLike(userId, momentId)
-                loadData(userId, isRefresh = false) // 交互后立即重新拉取并同步状态
-            } catch (e: Exception) { e.printStackTrace() }
+            repository.toggleLike(momentId = momentId)
+            loadData(userId, isRefresh = false)
         }
     }
 
     fun toggleCollect(momentId: String, userId: String) {
         viewModelScope.launch {
-            try {
-                repository.toggleCollection(userId, momentId)
-                loadData(userId, isRefresh = false)
-            } catch (e: Exception) { e.printStackTrace() }
+            repository.toggleCollection(momentId = momentId)
+            loadData(userId, isRefresh = false)
         }
     }
 
@@ -119,9 +128,15 @@ class MineViewModel : ViewModel() {
 
     fun createFolder(name: String) {
         viewModelScope.launch {
-            currentUserId?.let { uid ->
-                repository.createFolder(uid, name)
+            val uid = currentUserId ?: return@launch
+            try {
+                repository.createFolder(name)
                 loadData(uid, isRefresh = false)
+                _message.emit("收藏夹已创建")
+            } catch (e: ApiMessageException) {
+                _message.emit(e.message ?: "创建收藏夹失败")
+            } catch (e: Exception) {
+                _message.emit("创建收藏夹失败")
             }
         }
     }
@@ -129,7 +144,7 @@ class MineViewModel : ViewModel() {
     fun deleteFolder(folderId: String) {
         viewModelScope.launch {
             currentUserId?.let { uid ->
-                repository.deleteFolder(folderId, uid)
+                repository.deleteFolder(folderId)
                 _selectedFolderId.value = null
                 loadData(uid, isRefresh = false)
             }
@@ -138,7 +153,7 @@ class MineViewModel : ViewModel() {
 
     fun moveCollectionToFolder(momentId: String, userId: String, folderId: String?) {
         viewModelScope.launch {
-            repository.moveCollectionToFolder(momentId, userId, folderId)
+            repository.moveCollectionToFolder(momentId, folderId = folderId)
             loadData(userId, isRefresh = false)
         }
     }

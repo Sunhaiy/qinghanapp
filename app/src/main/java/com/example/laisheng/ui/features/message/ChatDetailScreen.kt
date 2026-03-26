@@ -16,22 +16,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
-import coil.request.CachePolicy
-import coil.request.ImageRequest
 import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.ChatMessage
 
 import com.example.laisheng.ui.theme.Dimens
 
 import com.example.laisheng.ui.components.LaishengLoading
+import com.example.laisheng.ui.components.UserAvatar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,7 +38,6 @@ fun ChatDetailScreen(
     onBack: () -> Unit,
     viewModel: ChatDetailViewModel = viewModel()
 ) {
-    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val myAvatar by viewModel.myAvatar.collectAsState()
     var text by remember { mutableStateOf("") }
@@ -174,18 +168,8 @@ fun ChatDetailScreen(
 
 @Composable
 fun MessageBubble(message: ChatMessage, isMe: Boolean, otherAvatar: String?, myAvatar: String?) {
-    val context = LocalContext.current
     
     // 统一配置 ImageRequest，开启最高级别的缓存策略
-    val avatarRequest = remember(if (isMe) myAvatar else otherAvatar) {
-        ImageRequest.Builder(context)
-            .data(if (isMe) myAvatar else otherAvatar)
-            .decoderFactory(SvgDecoder.Factory())
-            .crossfade(true)
-            .diskCachePolicy(CachePolicy.ENABLED)
-            .memoryCachePolicy(CachePolicy.ENABLED)
-            .build()
-    }
 
     Column(
         modifier = Modifier
@@ -203,14 +187,12 @@ fun MessageBubble(message: ChatMessage, isMe: Boolean, otherAvatar: String?, myA
             verticalAlignment = Alignment.Top
         ) {
             if (!isMe) {
-                AsyncImage(
-                    model = avatarRequest,
-                    contentDescription = null,
+                UserAvatar(
+                    avatar = otherAvatar,
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentScale = ContentScale.Crop
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                 )
                 Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
             }
@@ -247,14 +229,12 @@ fun MessageBubble(message: ChatMessage, isMe: Boolean, otherAvatar: String?, myA
 
             if (isMe) {
                 Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
-                AsyncImage(
-                    model = avatarRequest,
-                    contentDescription = null,
+                UserAvatar(
+                    avatar = myAvatar,
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentScale = ContentScale.Crop
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                 )
             }
         }

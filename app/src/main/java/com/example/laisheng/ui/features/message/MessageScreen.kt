@@ -31,18 +31,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
 import com.example.laisheng.data.model.ChatListItem
-import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.ui.components.LaishengLoading
+import com.example.laisheng.ui.components.UserAvatar
 import com.example.laisheng.ui.theme.AppIcon
 import com.example.laisheng.ui.theme.AppIcons
 import dev.chrisbanes.haze.HazeState
@@ -100,7 +95,24 @@ fun MessageScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         item {
-                            MessageHeaderCard(chatCount = state.chatList.size)
+                            MessageHeaderCard(userCount = state.chatList.size)
+                        }
+
+                        if (state.chatList.isNotEmpty()) {
+                            item {
+                                Column(modifier = Modifier.padding(horizontal = 4.dp)) {
+                                    Text(
+                                        text = "互相关注",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "默认优先展示和你双向关注的用户，点开就能直接聊天。",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
 
                         if (state.chatList.isEmpty()) {
@@ -128,10 +140,12 @@ fun MessageScreen(
 }
 
 @Composable
-private fun MessageHeaderCard(chatCount: Int) {
+private fun MessageHeaderCard(userCount: Int) {
     Card(
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f))
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)
+        )
     ) {
         Row(
             modifier = Modifier
@@ -151,7 +165,7 @@ private fun MessageHeaderCard(chatCount: Int) {
             Column(modifier = Modifier.padding(start = 14.dp)) {
                 Text("消息", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
                 Text(
-                    "当前共有 $chatCount 个会话",
+                    text = "当前有 $userCount 位可直接联系的用户",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -171,8 +185,15 @@ private fun EmptyMessageState() {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             AppIcon(glyph = AppIcons.Message, tint = MaterialTheme.colorScheme.outline, size = 28.dp)
             Spacer(modifier = Modifier.height(10.dp))
-            Text("暂时没有新消息", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
-            Text("会话更新后会显示在这里。", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "还没有可聊天的用户",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+            )
+            Text(
+                "当出现互相关注或新会话后，会显示在这里。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -182,7 +203,6 @@ fun ChatItem(
     item: ChatListItem,
     onClick: () -> Unit
 ) {
-    val context = LocalContext.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -195,17 +215,12 @@ fun ChatItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(modifier = Modifier.size(54.dp)) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(NetworkModule.formatUrl(item.avatar))
-                        .decoderFactory(SvgDecoder.Factory())
-                        .build(),
-                    contentDescription = null,
+                UserAvatar(
+                    avatar = item.avatar,
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentScale = ContentScale.Crop
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                 )
                 if (item.unreadCount > 0) {
                     Box(
@@ -246,7 +261,7 @@ fun ChatItem(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = item.lastMessage ?: "",
+                    text = item.lastMessage ?: "开始聊天吧",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
