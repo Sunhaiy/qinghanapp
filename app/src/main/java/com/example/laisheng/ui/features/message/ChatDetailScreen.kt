@@ -1,7 +1,20 @@
 package com.example.laisheng.ui.features.message
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -10,8 +23,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,13 +48,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.model.ChatMessage
-
-import com.example.laisheng.ui.theme.Dimens
-
+import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.ui.components.LaishengLoading
 import com.example.laisheng.ui.components.UserAvatar
+import com.example.laisheng.ui.theme.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,12 +70,11 @@ fun ChatDetailScreen(
     val listState = rememberLazyListState()
     val messageCount = (uiState as? ChatDetailUiState.Success)?.messages?.size ?: 0
 
-    // 预先处理好格式化后的 URL，避免在列表渲染时重复计算
     val formattedOtherAvatar = remember(otherAvatarUrl) { NetworkModule.formatUrl(otherAvatarUrl) }
     val formattedMyAvatar = remember(myAvatar) { NetworkModule.formatUrl(myAvatar) }
 
-    LaunchedEffect(otherId) {
-        viewModel.loadHistory(userId, otherId)
+    LaunchedEffect(otherId, otherNickname, otherAvatarUrl) {
+        viewModel.loadHistory(userId, otherId, otherNickname, otherAvatarUrl)
     }
 
     LaunchedEffect(messageCount) {
@@ -59,6 +84,7 @@ fun ChatDetailScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0.dp),
         topBar = {
             TopAppBar(
                 title = { Text(otherNickname, fontSize = 18.sp, fontWeight = FontWeight.Bold) },
@@ -71,24 +97,31 @@ fun ChatDetailScreen(
         },
         bottomBar = {
             Surface(
-                tonalElevation = 2.dp, 
+                tonalElevation = 2.dp,
                 shadowElevation = 8.dp,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .imePadding(),
                 color = MaterialTheme.colorScheme.surface
             ) {
                 Row(
                     modifier = Modifier
-                        .navigationBarsPadding() // Handled by Scaffold usually if not in Surface, but good to be safe here if Surface is full width
+                        .navigationBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                         .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Input Text Field
                     OutlinedTextField(
                         value = text,
                         onValueChange = { text = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("说点什么吧...", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline) },
+                        placeholder = {
+                            Text(
+                                text = "输入消息...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        },
                         shape = RoundedCornerShape(24.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -101,10 +134,9 @@ fun ChatDetailScreen(
                         textStyle = MaterialTheme.typography.bodyMedium,
                         maxLines = 4
                     )
-                    
-                    Spacer(modifier = Modifier.width(12.dp))
-                    
-                    // Send Button
+
+                    Spacer(modifier = Modifier.size(12.dp))
+
                     val isEnabled = text.isNotBlank()
                     IconButton(
                         onClick = {
@@ -121,8 +153,8 @@ fun ChatDetailScreen(
                             )
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Send, 
-                            contentDescription = "Send", 
+                            imageVector = Icons.Default.Send,
+                            contentDescription = "发送",
                             tint = if (isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
@@ -133,14 +165,15 @@ fun ChatDetailScreen(
     ) { paddingValues ->
         Box(
             modifier = Modifier
-                .padding(paddingValues)
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surfaceContainerLowest) // Use theme color instead of hardcoded grey
+                .padding(top = paddingValues.calculateTopPadding())
+                .background(MaterialTheme.colorScheme.surfaceContainerLowest)
         ) {
             when (val state = uiState) {
                 is ChatDetailUiState.Loading -> {
                     LaishengLoading(modifier = Modifier.align(Alignment.Center))
                 }
+
                 is ChatDetailUiState.Success -> {
                     LazyColumn(
                         state = listState,
@@ -148,9 +181,9 @@ fun ChatDetailScreen(
                         contentPadding = PaddingValues(Dimens.PaddingMedium),
                         verticalArrangement = Arrangement.spacedBy(Dimens.PaddingMedium)
                     ) {
-                        items(state.messages) { message ->
+                        items(state.messages, key = { it.id }) { message ->
                             MessageBubble(
-                                message = message, 
+                                message = message,
                                 isMe = message.senderId == userId,
                                 otherAvatar = formattedOtherAvatar,
                                 myAvatar = formattedMyAvatar
@@ -158,8 +191,13 @@ fun ChatDetailScreen(
                         }
                     }
                 }
+
                 is ChatDetailUiState.Error -> {
-                    Text(state.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
+                    Text(
+                        text = state.message,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
                 }
             }
         }
@@ -167,21 +205,18 @@ fun ChatDetailScreen(
 }
 
 @Composable
-fun MessageBubble(message: ChatMessage, isMe: Boolean, otherAvatar: String?, myAvatar: String?) {
-    
-    // 统一配置 ImageRequest，开启最高级别的缓存策略
-
+private fun MessageBubble(
+    message: ChatMessage,
+    isMe: Boolean,
+    otherAvatar: String?,
+    myAvatar: String?
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp), // Reduce vertical padding for tighter group
+            .padding(vertical = 4.dp),
         horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
     ) {
-        // Timestamp (simplified logic: show for every message for now, or could use logic to show every 5 mins)
-        // For now, let's just show it if it's long enough ago or simplified. 
-        // Actually, let's add a small timestamp below the bubble or next to it? 
-        // Let's just keep it simple but refine the bubble.
-
         Row(
             horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
             verticalAlignment = Alignment.Top
@@ -194,7 +229,7 @@ fun MessageBubble(message: ChatMessage, isMe: Boolean, otherAvatar: String?, myA
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                 )
-                Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
+                Spacer(modifier = Modifier.size(Dimens.PaddingSmall))
             }
 
             Column(horizontalAlignment = if (isMe) Alignment.End else Alignment.Start) {
@@ -213,22 +248,15 @@ fun MessageBubble(message: ChatMessage, isMe: Boolean, otherAvatar: String?, myA
                         text = message.content.text ?: "",
                         modifier = Modifier
                             .padding(horizontal = 16.dp, vertical = 10.dp)
-                            .widthIn(max = 280.dp), // Limit max width
+                            .widthIn(max = 280.dp),
                         fontSize = 16.sp,
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
-                // Optional: Show time below bubble
-                // Text(
-                //     text = formatTime(message.createdAt), 
-                //     style = MaterialTheme.typography.labelSmall, 
-                //     color = MaterialTheme.colorScheme.outline,
-                //     modifier = Modifier.padding(top = 2.dp)
-                // )
             }
 
             if (isMe) {
-                Spacer(modifier = Modifier.width(Dimens.PaddingSmall))
+                Spacer(modifier = Modifier.size(Dimens.PaddingSmall))
                 UserAvatar(
                     avatar = myAvatar,
                     modifier = Modifier

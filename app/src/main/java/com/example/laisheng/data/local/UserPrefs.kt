@@ -67,6 +67,13 @@ class UserPrefs(context: Context) {
     fun getLastCollectionFolder(): String? =
         prefs.getString(KEY_LAST_COLLECTION_FOLDER, null)
 
+    fun saveDefaultCollectionFolderName(name: String) {
+        prefs.edit().putString(KEY_DEFAULT_COLLECTION_FOLDER_NAME, name).apply()
+    }
+
+    fun getDefaultCollectionFolderName(): String =
+        prefs.getString(KEY_DEFAULT_COLLECTION_FOLDER_NAME, "默认收藏夹") ?: "默认收藏夹"
+
     fun getSearchHistory(): Set<String> =
         prefs.getStringSet(KEY_SEARCH_HISTORY, emptySet()) ?: emptySet()
 
@@ -76,6 +83,25 @@ class UserPrefs(context: Context) {
 
     fun clearSearchHistory() {
         prefs.edit().remove(KEY_SEARCH_HISTORY).apply()
+    }
+
+    fun clearAuth() {
+        prefs.edit()
+            .remove(KEY_TOKEN)
+            .remove(KEY_USER_ID)
+            .remove(KEY_HANDLE)
+            .remove(KEY_NICKNAME)
+            .remove(KEY_AVATAR)
+            .remove(KEY_BIO)
+            .remove(KEY_BG_IMAGE)
+            .remove(KEY_IP_LOCATION)
+            .remove(KEY_HANDLE_UPDATED_AT)
+            .remove(KEY_MEMBERSHIP_STATUS)
+            .remove(KEY_MEMBERSHIP_LEVEL)
+            .remove(KEY_MEMBERSHIP_STARTED_AT)
+            .remove(KEY_MEMBERSHIP_EXPIRES_AT)
+            .remove(KEY_LAST_COLLECTION_FOLDER)
+            .apply()
     }
 
     fun clear() {
@@ -98,6 +124,7 @@ class UserPrefs(context: Context) {
         const val KEY_MEMBERSHIP_EXPIRES_AT = "membership_expires_at"
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_LAST_COLLECTION_FOLDER = "last_collection_folder"
+        const val KEY_DEFAULT_COLLECTION_FOLDER_NAME = "default_collection_folder_name"
         const val KEY_SEARCH_HISTORY = "search_history"
     }
 }

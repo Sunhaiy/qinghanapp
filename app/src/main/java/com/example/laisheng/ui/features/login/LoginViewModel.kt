@@ -36,13 +36,12 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    fun register(handle: String, password: String, nickname: String, avatar: String) {
+    fun register(handle: String, password: String, nickname: String) {
         submitAuthRequest(
             request = mapOf(
                 "handle" to handle.trim().removePrefix("@"),
                 "password" to password,
-                "nickname" to nickname,
-                "avatar" to avatar
+                "nickname" to nickname
             ),
             isRegister = true
         )

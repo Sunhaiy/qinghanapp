@@ -233,7 +233,7 @@ private fun HomeFeaturedFeed(
             }
         }
 
-        if (followingMoments.isNotEmpty()) {
+        if (false && followingMoments.isNotEmpty()) {
             item {
                 Column(
                     modifier = Modifier

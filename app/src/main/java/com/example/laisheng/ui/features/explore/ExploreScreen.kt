@@ -68,7 +68,7 @@ fun ExploreScreen(
                 duration = SnackbarDuration.Short
             )
             if (result == SnackbarResult.ActionPerformed) {
-                event.onAction?.invoke()
+                showCollectionDialog = event.momentId
             }
         }
     }
@@ -116,9 +116,7 @@ fun ExploreScreen(
                                     },
                                     onCommentClick = { onMomentClick(moment.id) }, 
                                     onBookmarkClick = {
-                                        viewModel.onBookmarkClick(userId, moment.id) {
-                                            showCollectionDialog = moment.id
-                                        }
+                                        viewModel.onBookmarkClick(userId, moment.id)
                                     }
                                 )
                             }

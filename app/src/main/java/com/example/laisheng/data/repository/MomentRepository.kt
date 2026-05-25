@@ -1,5 +1,6 @@
 package com.example.laisheng.data.repository
 
+import android.util.Log
 import com.example.laisheng.data.model.ChatListItem
 import com.example.laisheng.data.model.ChatMessage
 import com.example.laisheng.data.model.CollectionFolder
@@ -8,6 +9,7 @@ import com.example.laisheng.data.model.CommentRequest
 import com.example.laisheng.data.model.CreateMomentRequest
 import com.example.laisheng.data.model.FolderCreateRequest
 import com.example.laisheng.data.model.FollowCounts
+import com.example.laisheng.data.model.FollowRelation
 import com.example.laisheng.data.model.FollowToggleRequest
 import com.example.laisheng.data.model.HistoryResponse
 import com.example.laisheng.data.model.HistoryViewRequest
@@ -19,18 +21,24 @@ import com.example.laisheng.data.model.Moment
 import com.example.laisheng.data.model.MomentActionRequest
 import com.example.laisheng.data.model.MomentResponse
 import com.example.laisheng.data.model.MoveCollectionRequest
+import com.example.laisheng.data.model.NotificationItem
 import com.example.laisheng.data.model.SendMessageRequest
 import com.example.laisheng.data.model.MessageContent
 import com.example.laisheng.data.model.UploadResponse
 import com.example.laisheng.data.model.User
 import com.example.laisheng.data.model.toUserOrNull
 import com.example.laisheng.data.remote.ApiService
+import com.google.gson.Gson
+import com.google.gson.JsonElement
+import com.google.gson.reflect.TypeToken
 import okhttp3.MultipartBody
 import retrofit2.HttpException
 
 class ApiMessageException(message: String) : Exception(message)
 
 class MomentRepository(private val apiService: ApiService) {
+    private val tag = "MomentRepository"
+    private val gson = Gson()
 
     suspend fun login(handle: String, password: String): User? =
         try {
@@ -54,7 +62,7 @@ class MomentRepository(private val apiService: ApiService) {
             if (currentUserId != null && currentUserId == userId) {
                 apiService.getMe()
             } else {
-                apiService.getUser(userId, currentUserId)
+                apiService.getUser(userId)
             }
         } catch (_: Exception) {
             null
@@ -69,14 +77,14 @@ class MomentRepository(private val apiService: ApiService) {
 
     suspend fun getMoments(page: Int = 1, limit: Int = 10, currentUserId: String? = null): MomentResponse? =
         try {
-            apiService.getMoments(page, limit, currentUserId)
+            apiService.getMoments(page, limit)
         } catch (_: Exception) {
             null
         }
 
     suspend fun getMomentDetail(id: String, currentUserId: String? = null): Moment? =
         try {
-            apiService.getMomentDetail(id, currentUserId)
+            apiService.getMomentDetail(id)
         } catch (_: Exception) {
             null
         }
@@ -88,7 +96,7 @@ class MomentRepository(private val apiService: ApiService) {
         currentUserId: String? = null
     ): MomentResponse? =
         try {
-            apiService.getUserMoments(userId, page, limit, currentUserId)
+            apiService.getUserMoments(userId, page, limit)
         } catch (_: Exception) {
             null
         }
@@ -100,14 +108,14 @@ class MomentRepository(private val apiService: ApiService) {
         currentUserId: String? = null
     ): MomentResponse? =
         try {
-            apiService.searchMoments(query, page, limit, currentUserId)
+            apiService.searchMoments(query, page, limit)
         } catch (_: Exception) {
             null
         }
 
     suspend fun getFeaturedMoments(currentUserId: String? = null): List<Moment>? =
         try {
-            apiService.getFeaturedMoments(currentUserId)
+            apiService.getFeaturedMoments()
         } catch (_: Exception) {
             null
         }
@@ -118,7 +126,7 @@ class MomentRepository(private val apiService: ApiService) {
         currentUserId: String? = null
     ): MomentResponse? =
         try {
-            currentUserId?.let { apiService.getFollowingMoments(page, limit, it) }
+            apiService.getFollowingMoments(page, limit)
         } catch (_: Exception) {
             null
         }
@@ -137,11 +145,12 @@ class MomentRepository(private val apiService: ApiService) {
     ): List<Moment> =
         try {
             if (currentUserId != null && userId == currentUserId) {
-                apiService.getMyCollections(folderId).value
+                parseListPayload(apiService.getMyCollections(folderId))
             } else {
                 emptyList()
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(tag, "getUserCollections failed userId=$userId currentUserId=$currentUserId folderId=$folderId", e)
             emptyList()
         }
 
@@ -155,8 +164,9 @@ class MomentRepository(private val apiService: ApiService) {
 
     suspend fun getFolders(userId: String? = null): List<CollectionFolder> =
         try {
-            apiService.getFolders().value
-        } catch (_: Exception) {
+            parseListPayload(apiService.getFolders())
+        } catch (e: Exception) {
+            Log.e(tag, "getFolders failed", e)
             emptyList()
         }
 
@@ -178,8 +188,9 @@ class MomentRepository(private val apiService: ApiService) {
 
     suspend fun getUserLikedMoments(userId: String? = null, currentUserId: String? = null): List<Moment> =
         try {
-            apiService.getMyLikedMoments().value
-        } catch (_: Exception) {
+            parseListPayload(apiService.getMyLikedMoments())
+        } catch (e: Exception) {
+            Log.e(tag, "getUserLikedMoments failed userId=$userId currentUserId=$currentUserId", e)
             emptyList()
         }
 
@@ -213,29 +224,40 @@ class MomentRepository(private val apiService: ApiService) {
 
     suspend fun getFollowCounts(userId: String? = null): FollowCounts? =
         try {
-            apiService.getFollowCounts()
+            if (userId.isNullOrBlank()) apiService.getFollowCounts() else apiService.getFollowCountsByUser(userId)
         } catch (_: Exception) {
             null
         }
 
-    suspend fun getFollowers(): List<User> =
+    suspend fun getFollowers(userId: String? = null): List<User> =
         try {
-            apiService.getFollowers().value
-        } catch (_: Exception) {
+            if (userId.isNullOrBlank()) {
+                parseListPayload(apiService.getFollowers())
+            } else {
+                parseListPayload(apiService.getFollowersByUser(userId))
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "getFollowers failed userId=$userId", e)
             emptyList()
         }
 
-    suspend fun getFollowing(): List<User> =
+    suspend fun getFollowing(userId: String? = null): List<User> =
         try {
-            apiService.getFollowing().value
-        } catch (_: Exception) {
+            if (userId.isNullOrBlank()) {
+                parseListPayload(apiService.getFollowing())
+            } else {
+                parseListPayload(apiService.getFollowingByUser(userId))
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "getFollowing failed userId=$userId", e)
             emptyList()
         }
 
     suspend fun getMutualFollowing(userId: String? = null): List<User> =
         try {
-            apiService.getMutualFollowing().value
-        } catch (_: Exception) {
+            parseListPayload(apiService.getMutualFollowing())
+        } catch (e: Exception) {
+            Log.e(tag, "getMutualFollowing failed userId=$userId", e)
             emptyList()
         }
 
@@ -244,6 +266,13 @@ class MomentRepository(private val apiService: ApiService) {
             apiService.toggleFollow(FollowToggleRequest(targetUserId)).followed ?: false
         } catch (_: Exception) {
             false
+        }
+
+    suspend fun getFollowRelation(targetUserId: String): FollowRelation? =
+        try {
+            apiService.getFollowRelation(targetUserId)
+        } catch (_: Exception) {
+            null
         }
 
     suspend fun getChatList(userId: String? = null): List<ChatListItem> =
@@ -275,6 +304,21 @@ class MomentRepository(private val apiService: ApiService) {
     suspend fun getUnreadMessages(): Int =
         try {
             apiService.getUnreadMessages().unreadCount
+        } catch (_: Exception) {
+            0
+        }
+
+    suspend fun getNotifications(page: Int = 1, limit: Int = 20): List<NotificationItem> =
+        try {
+            parseListPayload(apiService.getNotifications(page, limit))
+        } catch (e: Exception) {
+            Log.e(tag, "getNotifications failed page=$page limit=$limit", e)
+            emptyList()
+        }
+
+    suspend fun getUnreadNotifications(): Int =
+        try {
+            apiService.getUnreadNotifications().unreadCount
         } catch (_: Exception) {
             0
         }
@@ -354,6 +398,23 @@ class MomentRepository(private val apiService: ApiService) {
             body.contains("达到会员限制") -> "达到会员限制"
             body.isNotBlank() -> body
             else -> "请求失败"
+        }
+    }
+
+    private inline fun <reified T> parseListPayload(payload: JsonElement): List<T> {
+        val listType = object : TypeToken<List<T>>() {}.type
+        return when {
+            payload.isJsonArray -> gson.fromJson(payload, listType) ?: emptyList()
+            payload.isJsonObject -> {
+                val obj = payload.asJsonObject
+                val container = when {
+                    obj.has("value") -> obj.get("value")
+                    obj.has("data") -> obj.get("data")
+                    else -> return emptyList()
+                }
+                gson.fromJson(container, listType) ?: emptyList()
+            }
+            else -> emptyList()
         }
     }
 }

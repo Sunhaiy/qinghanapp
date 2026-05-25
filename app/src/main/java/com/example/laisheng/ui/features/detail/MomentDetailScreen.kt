@@ -24,8 +24,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -76,6 +77,7 @@ fun MomentDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val folders by viewModel.folders.collectAsState()
+    val isPostingComment by viewModel.isPostingComment.collectAsState()
     var commentText by remember { mutableStateOf("") }
     var showMoveDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -93,7 +95,7 @@ fun MomentDetailScreen(
                 duration = SnackbarDuration.Short
             )
             if (result == SnackbarResult.ActionPerformed) {
-                event.onAction?.invoke()
+                showMoveDialog = true
             }
         }
     }
@@ -104,17 +106,22 @@ fun MomentDetailScreen(
                 title = { Text("瞬间详情", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 }
             )
         },
         bottomBar = {
-            Surface(modifier = Modifier.navigationBarsPadding(), tonalElevation = 1.dp) {
+            Surface(
+                tonalElevation = 2.dp,
+                shadowElevation = 6.dp,
+                color = MaterialTheme.colorScheme.surface
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Dimens.PaddingMedium, vertical = 8.dp),
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextField(
@@ -122,19 +129,51 @@ fun MomentDetailScreen(
                         onValueChange = { commentText = it },
                         placeholder = { Text("写一条评论...") },
                         modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(24.dp),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent
-                        )
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent
+                        ),
+                        maxLines = 4
                     )
-                    IconButton(
-                        onClick = {
-                            viewModel.postComment(userId, momentId, commentText)
-                            commentText = ""
-                        },
-                        enabled = commentText.isNotBlank()
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Surface(
+                        shape = CircleShape,
+                        color = if (commentText.isNotBlank() && !isPostingComment) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        }
                     ) {
-                        Icon(Icons.Default.Send, contentDescription = "发送", tint = MaterialTheme.colorScheme.primary)
+                        IconButton(
+                            onClick = {
+                                val text = commentText
+                                viewModel.postComment(userId, momentId, text)
+                                commentText = ""
+                            },
+                            enabled = commentText.isNotBlank() && !isPostingComment
+                        ) {
+                            if (isPostingComment) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            } else {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Send,
+                                    contentDescription = "发送评论",
+                                    tint = if (commentText.isNotBlank()) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -177,11 +216,7 @@ fun MomentDetailScreen(
                                     onUserClick = { onUserClick(state.moment.userId) },
                                     onLikeClick = { viewModel.onLikeClick(userId, state.moment.id) },
                                     onCommentClick = {},
-                                    onBookmarkClick = {
-                                        viewModel.onBookmarkClick(userId, state.moment.id) {
-                                            showMoveDialog = true
-                                        }
-                                    }
+                                    onBookmarkClick = { viewModel.onBookmarkClick(userId, state.moment.id) }
                                 )
                             }
                         }
@@ -194,7 +229,10 @@ fun MomentDetailScreen(
                             item { EmptyCommentsState() }
                         } else {
                             items(state.comments) { comment ->
-                                CommentItem(comment)
+                                CommentItem(
+                                    comment = comment,
+                                    onUserClick = { onUserClick(comment.userId) }
+                                )
                             }
                         }
                     }
@@ -248,12 +286,11 @@ private fun EmptyCommentsState() {
 }
 
 @Composable
-fun CommentItem(comment: Comment) {
+fun CommentItem(comment: Comment, onUserClick: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { }
                 .padding(horizontal = Dimens.PaddingMedium, vertical = Dimens.PaddingSmall),
             verticalAlignment = Alignment.Top
         ) {
@@ -263,6 +300,7 @@ fun CommentItem(comment: Comment) {
                     .size(38.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable(onClick = onUserClick)
             )
             Spacer(modifier = Modifier.width(Dimens.PaddingMedium))
             Column(modifier = Modifier.weight(1f)) {

@@ -7,9 +7,9 @@ import com.example.laisheng.data.model.CollectionFolder
 import com.example.laisheng.data.model.Comment
 import com.example.laisheng.data.model.CommentRequest
 import com.example.laisheng.data.model.CreateMomentRequest
-import com.example.laisheng.data.model.DeleteMomentRequest
 import com.example.laisheng.data.model.FolderCreateRequest
 import com.example.laisheng.data.model.FollowCounts
+import com.example.laisheng.data.model.FollowRelation
 import com.example.laisheng.data.model.FollowToggleRequest
 import com.example.laisheng.data.model.HistoryResponse
 import com.example.laisheng.data.model.HistoryViewRequest
@@ -22,11 +22,13 @@ import com.example.laisheng.data.model.Moment
 import com.example.laisheng.data.model.MomentActionRequest
 import com.example.laisheng.data.model.MomentResponse
 import com.example.laisheng.data.model.MoveCollectionRequest
+import com.example.laisheng.data.model.NotificationItem
 import com.example.laisheng.data.model.SendMessageRequest
 import com.example.laisheng.data.model.ToggleResult
 import com.example.laisheng.data.model.UnreadCountResponse
 import com.example.laisheng.data.model.UploadResponse
 import com.example.laisheng.data.model.User
+import com.google.gson.JsonElement
 import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -53,10 +55,7 @@ interface ApiService {
     suspend fun heartbeat(@Body request: Map<String, String> = emptyMap()): Map<String, Any>
 
     @GET("api/users/{id}")
-    suspend fun getUser(
-        @Path("id") id: String,
-        @Query("current_user_id") currentUserId: String? = null
-    ): User
+    suspend fun getUser(@Path("id") id: String): User
 
     @PUT("api/users/{id}")
     suspend fun updateProfile(
@@ -70,52 +69,40 @@ interface ApiService {
     @GET("api/moments")
     suspend fun getMoments(
         @Query("page") page: Int? = 1,
-        @Query("limit") limit: Int? = 10,
-        @Query("current_user_id") currentUserId: String? = null
+        @Query("limit") limit: Int? = 10
     ): MomentResponse
 
     @GET("api/moments/{id}")
-    suspend fun getMomentDetail(
-        @Path("id") id: String,
-        @Query("current_user_id") currentUserId: String? = null
-    ): Moment
+    suspend fun getMomentDetail(@Path("id") id: String): Moment
 
     @GET("api/moments/user/{userId}")
     suspend fun getUserMoments(
         @Path("userId") userId: String,
         @Query("page") page: Int? = 1,
-        @Query("limit") limit: Int? = 10,
-        @Query("current_user_id") currentUserId: String? = null
+        @Query("limit") limit: Int? = 10
     ): MomentResponse
 
     @GET("api/moments/search")
     suspend fun searchMoments(
         @Query("q") query: String,
         @Query("page") page: Int,
-        @Query("limit") limit: Int,
-        @Query("current_user_id") currentUserId: String? = null
+        @Query("limit") limit: Int
     ): MomentResponse
 
     @GET("api/moments/featured")
-    suspend fun getFeaturedMoments(
-        @Query("current_user_id") currentUserId: String? = null
-    ): List<Moment>
+    suspend fun getFeaturedMoments(): List<Moment>
 
     @GET("api/moments/following")
     suspend fun getFollowingMoments(
         @Query("page") page: Int? = 1,
-        @Query("limit") limit: Int? = 10,
-        @Query("current_user_id") currentUserId: String
+        @Query("limit") limit: Int? = 10
     ): MomentResponse
 
     @POST("api/moments")
     suspend fun createMoment(@Body request: CreateMomentRequest): Moment
 
-    @HTTP(method = "DELETE", path = "api/moments/{id}", hasBody = true)
-    suspend fun deleteMoment(
-        @Path("id") id: String,
-        @Body request: DeleteMomentRequest
-    ): Map<String, Any>
+    @DELETE("api/moments/{id}")
+    suspend fun deleteMoment(@Path("id") id: String): Map<String, Any>
 
     @POST("api/comments")
     suspend fun postComment(@Body request: CommentRequest): Comment
@@ -127,7 +114,7 @@ interface ApiService {
     suspend fun toggleLike(@Body request: MomentActionRequest): ToggleResult
 
     @GET("api/likes/user/me")
-    suspend fun getMyLikedMoments(): ListEnvelope<Moment>
+    suspend fun getMyLikedMoments(): JsonElement
 
     @POST("api/follows/toggle")
     suspend fun toggleFollow(@Body request: FollowToggleRequest): ToggleResult
@@ -135,23 +122,35 @@ interface ApiService {
     @GET("api/follows/counts")
     suspend fun getFollowCounts(): FollowCounts
 
+    @GET("api/follows/counts/{userId}")
+    suspend fun getFollowCountsByUser(@Path("userId") userId: String): FollowCounts
+
     @GET("api/follows/followers")
-    suspend fun getFollowers(): ListEnvelope<User>
+    suspend fun getFollowers(): JsonElement
+
+    @GET("api/follows/followers/{userId}")
+    suspend fun getFollowersByUser(@Path("userId") userId: String): JsonElement
 
     @GET("api/follows/following")
-    suspend fun getFollowing(): ListEnvelope<User>
+    suspend fun getFollowing(): JsonElement
+
+    @GET("api/follows/following/{userId}")
+    suspend fun getFollowingByUser(@Path("userId") userId: String): JsonElement
 
     @GET("api/follows/mutual")
-    suspend fun getMutualFollowing(): ListEnvelope<User>
+    suspend fun getMutualFollowing(): JsonElement
+
+    @GET("api/follows/relation/{userId}")
+    suspend fun getFollowRelation(@Path("userId") userId: String): FollowRelation
 
     @POST("api/collections/toggle")
     suspend fun toggleCollection(@Body request: MomentActionRequest): ToggleResult
 
     @GET("api/collections/user/me")
-    suspend fun getMyCollections(@Query("folderId") folderId: String? = null): ListEnvelope<Moment>
+    suspend fun getMyCollections(@Query("folderId") folderId: String? = null): JsonElement
 
     @GET("api/collections/folders")
-    suspend fun getFolders(): ListEnvelope<CollectionFolder>
+    suspend fun getFolders(): JsonElement
 
     @POST("api/collections/folders")
     suspend fun createFolder(@Body request: FolderCreateRequest): CollectionFolder
@@ -185,7 +184,7 @@ interface ApiService {
     suspend fun getNotifications(
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 20
-    ): ListEnvelope<Map<String, Any>>
+    ): JsonElement
 
     @GET("api/notifications/unread")
     suspend fun getUnreadNotifications(): UnreadCountResponse

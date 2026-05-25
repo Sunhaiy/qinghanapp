@@ -121,7 +121,7 @@ fun PostScreen(
                 Text("瞬间", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
                 Button(
                     onClick = { 
-                        viewModel.createMoment(userId, content, selectedImageUris.toList(), selectedVoiceUri, voiceDuration, context) 
+                        viewModel.createMoment(content, selectedImageUris.toList(), selectedVoiceUri, voiceDuration, context) 
                     },
                     enabled = (content.isNotBlank() || selectedImageUris.isNotEmpty() || selectedVoiceUri != null) && uiState !is PostUiState.Loading,
                     shape = RoundedCornerShape(12.dp),

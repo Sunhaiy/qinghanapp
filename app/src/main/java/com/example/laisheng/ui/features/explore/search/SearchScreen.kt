@@ -28,6 +28,7 @@ import com.example.laisheng.ui.components.LaishengLoading
 import com.example.laisheng.ui.components.PostCard
 import com.example.laisheng.ui.components.UserItem
 import com.example.laisheng.ui.features.explore.EmptySearchState
+import com.example.laisheng.ui.features.mine.MoveToFolderDialog
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -45,6 +46,9 @@ fun SearchScreen(
     val isSearching by viewModel.isSearching.collectAsState()
     val momentResults by viewModel.momentSearchResults.collectAsState()
     val userResults by viewModel.userSearchResults.collectAsState()
+    val folders by viewModel.folders.collectAsState()
+    var showCollectionDialog by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -54,12 +58,34 @@ fun SearchScreen(
         keyboardController?.show()
     }
 
+    LaunchedEffect(userId) {
+        if (userId.isNotEmpty()) {
+            viewModel.loadFolders(userId)
+        }
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.snackbarEvent.collect { event ->
+            val result = snackbarHostState.showSnackbar(
+                message = event.message,
+                actionLabel = event.actionLabel,
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                showCollectionDialog = event.momentId
+            }
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        contentWindowInsets = WindowInsets(0.dp),
         topBar = {
             Column {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .statusBarsPadding()
                         .padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -118,7 +144,12 @@ fun SearchScreen(
             }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding())
+                .imePadding()
+        ) {
              val history by viewModel.searchHistory.collectAsState()
             
              if (searchQuery.isEmpty()) {
@@ -191,10 +222,7 @@ fun SearchScreen(
                                         onLikeClick = { viewModel.onLikeClick(userId, moment.id) },
                                         onCommentClick = { onMomentClick(moment.id) },
                                         onBookmarkClick = {
-                                            viewModel.onBookmarkClick(userId, moment.id) {
-                                                // Dialog logic simplified/omitted for search results for now to avoid complexity
-                                                // Or we could pass a callback from parent if really needed.
-                                            }
+                                            viewModel.onBookmarkClick(userId, moment.id)
                                         }
                                     )
                                 }
@@ -217,5 +245,16 @@ fun SearchScreen(
                 }
             }
         }
+    }
+
+    if (showCollectionDialog != null) {
+        MoveToFolderDialog(
+            folders = folders,
+            onDismiss = { showCollectionDialog = null },
+            onSelectFolder = { folderId ->
+                viewModel.confirmCollection(userId, showCollectionDialog!!, folderId)
+                showCollectionDialog = null
+            }
+        )
     }
 }

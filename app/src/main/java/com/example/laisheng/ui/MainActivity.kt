@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -58,6 +60,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.laisheng.data.local.UserPrefs
+import com.example.laisheng.data.local.MessageLocalStore
 import com.example.laisheng.data.remote.AuthSession
 import com.example.laisheng.data.remote.NetworkModule
 import com.example.laisheng.data.remote.SocketManager
@@ -75,9 +78,12 @@ import com.example.laisheng.ui.features.mine.MineTabDetailScreen
 import com.example.laisheng.ui.features.mine.UserProfileScreen
 import com.example.laisheng.ui.features.mine.edit.EditProfileScreen
 import com.example.laisheng.ui.features.mine.follows.FollowScreen
+import com.example.laisheng.ui.features.notification.NotificationScreen
+import com.example.laisheng.ui.features.notification.NotificationViewModel
 import com.example.laisheng.ui.features.post.PostScreen
 import com.example.laisheng.ui.features.settings.SettingsScreen
 import com.example.laisheng.ui.navigation.Route
+import com.example.laisheng.ui.components.LaishengLoading
 import com.example.laisheng.ui.theme.AppIcon
 import com.example.laisheng.ui.theme.AppIcons
 import com.example.laisheng.ui.theme.LaishengTheme
@@ -92,6 +98,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val userPrefs = UserPrefs(this)
+        MessageLocalStore.init(this)
         AuthSession.updateToken(userPrefs.getToken())
         val mainViewModel = MainViewModel(userPrefs)
 
@@ -109,11 +116,40 @@ class MainActivity : ComponentActivity() {
 fun Laisheng(mainViewModel: MainViewModel) {
     val context = LocalContext.current
     val userPrefs = remember { UserPrefs(context) }
+    val notificationViewModel: NotificationViewModel = viewModel()
+    var isCheckingSession by remember { mutableStateOf(true) }
     var loggedInUserId by remember {
         mutableStateOf(userPrefs.getUserId().takeIf { !userPrefs.getToken().isNullOrBlank() })
     }
 
+    SideEffect {
+        AuthSession.updateToken(userPrefs.getToken())
+    }
+
+    LaunchedEffect(Unit) {
+        val savedToken = userPrefs.getToken()
+        if (savedToken.isNullOrBlank()) {
+            AuthSession.clear()
+            loggedInUserId = null
+            isCheckingSession = false
+            return@LaunchedEffect
+        }
+
+        AuthSession.updateToken(savedToken)
+        val currentUser = runCatching { NetworkModule.apiService.getMe() }.getOrNull()
+        if (currentUser == null) {
+            AuthSession.clear()
+            userPrefs.clearAuth()
+            loggedInUserId = null
+        } else {
+            userPrefs.saveAuth(savedToken, currentUser)
+            loggedInUserId = currentUser.id
+        }
+        isCheckingSession = false
+    }
+
     LaunchedEffect(loggedInUserId) {
+        if (isCheckingSession) return@LaunchedEffect
         loggedInUserId?.let { id ->
             SocketManager.connect(id)
             runCatching { NetworkModule.apiService.heartbeat() }
@@ -122,6 +158,13 @@ fun Laisheng(mainViewModel: MainViewModel) {
 
     DisposableEffect(Unit) {
         onDispose { SocketManager.disconnect() }
+    }
+
+    if (isCheckingSession) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            LaishengLoading()
+        }
+        return
     }
 
     if (loggedInUserId == null) {
@@ -137,15 +180,24 @@ fun Laisheng(mainViewModel: MainViewModel) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val unreadNotificationCount by notificationViewModel.unreadCount.collectAsState()
     val items = listOf(Route.Home, Route.Explore, Route.Post, Route.Message, Route.Mine)
+
+    LaunchedEffect(loggedInUserId, currentRoute) {
+        if (loggedInUserId != null) {
+            notificationViewModel.refreshUnreadCount()
+        }
+    }
 
     Scaffold(
         topBar = {
-            if (!isFullScreenRoute(currentRoute)) {
+            if (!isFullScreenRoute(currentRoute) && currentRoute != Route.Mine.route) {
                 TopBar(
                     hazeState = hazeState,
                     currentRoute = currentRoute,
-                    onSearchClick = { navController.navigate(Route.Search.route) }
+                    unreadNotificationCount = unreadNotificationCount,
+                    onSearchClick = { navController.navigate(Route.Search.route) },
+                    onNotificationClick = { navController.navigate(Route.Message.route) }
                 )
             }
         },
@@ -205,11 +257,13 @@ fun Laisheng(mainViewModel: MainViewModel) {
                         hazeState = hazeState,
                         userId = userId,
                         paddingValues = paddingValues,
+                        onNotificationCenterClick = { navController.navigate("notifications") },
                         onChatClick = { id, name, avatar ->
                             val encName = Uri.encode(name)
                             val encAvatar = Uri.encode(avatar ?: "")
                             navController.navigate("chat/$id/$encName?avatar=$encAvatar")
-                        }
+                        },
+                        onUserClick = { uid -> navController.navigate("user_profile/$uid") }
                     )
                 }
 
@@ -218,7 +272,10 @@ fun Laisheng(mainViewModel: MainViewModel) {
                         hazeState = hazeState,
                         userId = userId,
                         paddingValues = paddingValues,
-                        onFollowClick = { uid, title, type -> navController.navigate("follows/$uid/$title/$type") },
+                        onFollowClick = { uid, title, type ->
+                            val encodedTitle = Uri.encode(title)
+                            navController.navigate("follows/$uid/$encodedTitle/$type")
+                        },
                         onEditClick = { nick, handle, bio, av, bg, lastUpdate ->
                             val eN = Uri.encode(nick)
                             val eH = Uri.encode(handle)
@@ -260,7 +317,8 @@ fun Laisheng(mainViewModel: MainViewModel) {
                         title = title,
                         tab = tab,
                         onBack = { navController.popBackStack() },
-                        onMomentClick = { id -> navController.navigate("moment_detail/$id") }
+                        onMomentClick = { id -> navController.navigate("moment_detail/$id") },
+                        onUserClick = { uid -> navController.navigate("user_profile/$uid") }
                     )
                 }
 
@@ -354,7 +412,10 @@ fun Laisheng(mainViewModel: MainViewModel) {
                             navController.navigate("chat/$id/$encName?avatar=$encAvatar")
                         },
                         onMomentClick = { id -> navController.navigate("moment_detail/$id") },
-                        onFollowClick = { uid, title, type -> navController.navigate("follows/$uid/$title/$type") }
+                        onFollowClick = { uid, title, type ->
+                            val encodedTitle = Uri.encode(title)
+                            navController.navigate("follows/$uid/$encodedTitle/$type")
+                        }
                     )
                 }
 
@@ -363,7 +424,7 @@ fun Laisheng(mainViewModel: MainViewModel) {
                         onBack = { navController.popBackStack() },
                         onLogout = {
                             AuthSession.clear()
-                            userPrefs.clear()
+                            userPrefs.clearAuth()
                             loggedInUserId = null
                         },
                         mainViewModel = mainViewModel
@@ -381,6 +442,15 @@ fun Laisheng(mainViewModel: MainViewModel) {
                         onMomentClick = { id -> navController.navigate("moment_detail/$id") }
                     )
                 }
+
+                composable("notifications") {
+                    NotificationScreen(
+                        hazeState = hazeState,
+                        onBack = { navController.popBackStack() },
+                        onMomentClick = { id -> navController.navigate("moment_detail/$id") },
+                        onUserClick = { uid -> navController.navigate("user_profile/$uid") }
+                    )
+                }
             }
         }
     }
@@ -395,9 +465,9 @@ private fun isFullScreenRoute(route: String?): Boolean =
         route?.startsWith("user_profile") == true ||
         route == "membership" ||
         route == "history" ||
+        route == "notifications" ||
         route == Route.Settings.route ||
         route == Route.Post.route ||
-        route == Route.Mine.route ||
         route == Route.Search.route
 
 @Composable
@@ -491,7 +561,13 @@ fun BottomNavigation(hazeState: HazeState, navController: NavController, items: 
 }
 
 @Composable
-fun TopBar(hazeState: HazeState, currentRoute: String?, onSearchClick: () -> Unit) {
+fun TopBar(
+    hazeState: HazeState,
+    currentRoute: String?,
+    unreadNotificationCount: Int,
+    onSearchClick: () -> Unit,
+    onNotificationClick: () -> Unit
+) {
     val itemsList = listOf(Route.Home, Route.Explore, Route.Post, Route.Message, Route.Mine)
     val backgroundColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
     val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
@@ -519,8 +595,25 @@ fun TopBar(hazeState: HazeState, currentRoute: String?, onSearchClick: () -> Uni
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("来声", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = contentColor)
-                    IconButton(onClick = {}) {
-                        AppIcon(glyph = AppIcons.Bell, tint = contentColor, size = 22.dp)
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        IconButton(onClick = onNotificationClick) {
+                            AppIcon(glyph = AppIcons.Bell, tint = contentColor, size = 22.dp)
+                        }
+                        if (unreadNotificationCount > 0) {
+                            Surface(
+                                shape = androidx.compose.foundation.shape.CircleShape,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 10.dp, end = 8.dp)
+                            ) {
+                                Text(
+                                    text = unreadNotificationCount.coerceAtMost(99).toString(),
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 }
 

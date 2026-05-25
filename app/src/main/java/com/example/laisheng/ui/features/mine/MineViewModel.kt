@@ -67,14 +67,15 @@ class MineViewModel : ViewModel() {
             if (isRefresh) _isRefreshing.value = true
             try {
                 val user = repository.getCurrentUser() ?: repository.getUserProfile(userId)
+                val effectiveUserId = user?.id ?: userId
                 val followCounts = repository.getFollowCounts() ?: FollowCounts(0, 0)
                 val mutualFriends = repository.getMutualFollowing()
-                val momentsRaw = repository.getUserMoments(userId, currentUserId = userId)?.data.orEmpty()
-                val likedRaw = repository.getUserLikedMoments()
+                val momentsRaw = repository.getUserMoments(effectiveUserId, currentUserId = effectiveUserId)?.data.orEmpty()
+                val likedRaw = repository.getUserLikedMoments(effectiveUserId, currentUserId = effectiveUserId)
                 val folders = repository.getFolders()
                 val collectedRaw = repository.getUserCollections(
-                    userId = userId,
-                    currentUserId = userId,
+                    userId = effectiveUserId,
+                    currentUserId = effectiveUserId,
                     folderId = _selectedFolderId.value
                 )
 
@@ -135,7 +136,7 @@ class MineViewModel : ViewModel() {
                 _message.emit("收藏夹已创建")
             } catch (e: ApiMessageException) {
                 _message.emit(e.message ?: "创建收藏夹失败")
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _message.emit("创建收藏夹失败")
             }
         }
@@ -147,6 +148,7 @@ class MineViewModel : ViewModel() {
                 repository.deleteFolder(folderId)
                 _selectedFolderId.value = null
                 loadData(uid, isRefresh = false)
+                _message.emit("收藏夹已删除")
             }
         }
     }
@@ -155,6 +157,7 @@ class MineViewModel : ViewModel() {
         viewModelScope.launch {
             repository.moveCollectionToFolder(momentId, folderId = folderId)
             loadData(userId, isRefresh = false)
+            _message.emit(if (folderId == null) "已移到未分类" else "已移动到新的收藏夹")
         }
     }
 }

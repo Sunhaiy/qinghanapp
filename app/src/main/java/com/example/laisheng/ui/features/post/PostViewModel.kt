@@ -30,7 +30,6 @@ class PostViewModel : ViewModel() {
     val uiState = _uiState.asStateFlow()
 
     fun createMoment(
-        userId: String,
         contentText: String,
         imageUris: List<Uri>,
         voiceUri: Uri?,
@@ -81,13 +80,11 @@ class PostViewModel : ViewModel() {
                 val content = MomentContent(
                     text = contentText,
                     type = type,
-                    attachments = if (attachments.isNotEmpty()) attachments else null
+                    attachments = attachments
                 )
 
                 // 4. 调用发布接口
-                NetworkModule.apiService.createMoment(
-                    CreateMomentRequest(userId = userId, content = content)
-                )
+                NetworkModule.apiService.createMoment(CreateMomentRequest(content = content))
 
                 _uiState.value = PostUiState.Success
             } catch (e: Exception) {

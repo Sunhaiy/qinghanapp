@@ -24,16 +24,32 @@ class FollowViewModel : ViewModel() {
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing = _isRefreshing.asStateFlow()
 
-    fun loadFollowers(userId: String) {
+    fun loadSelfFollowers() {
         load { repository.getFollowers() }
     }
 
-    fun loadFollowing(userId: String) {
+    fun loadSelfFollowing() {
         load { repository.getFollowing() }
     }
 
+    fun loadFollowers(userId: String) {
+        load {
+            val targetUsers = repository.getFollowers(userId)
+            if (targetUsers.isNotEmpty()) targetUsers else repository.getFollowers()
+        }
+    }
+
+    fun loadFollowing(userId: String) {
+        load {
+            val targetUsers = repository.getFollowing(userId)
+            if (targetUsers.isNotEmpty()) targetUsers else repository.getFollowing()
+        }
+    }
+
     fun loadMutual(userId: String) {
-        load { repository.getMutualFollowing() }
+        load {
+            repository.getMutualFollowing()
+        }
     }
 
     private fun load(block: suspend () -> List<User>) {

@@ -1,0 +1,66 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="80" y1="40" x2="1180" y2="620" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111827"/>
+      <stop offset="0.55" stop-color="#1F2937"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="275" y1="130" x2="1080" y2="520" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8B4C6"/>
+      <stop offset="0.5" stop-color="#C7D2FE"/>
+      <stop offset="1" stop-color="#93C5FD"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="white" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="white" stop-opacity="0.04"/>
+    </linearGradient>
+    <filter id="blur" x="714" y="76" width="476" height="488" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="30"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="640" rx="32" fill="url(#bg)"/>
+  <circle cx="1020" cy="220" r="118" fill="#F472B6" opacity="0.16"/>
+  <circle cx="190" cy="120" r="96" fill="#60A5FA" opacity="0.12"/>
+  <circle cx="1080" cy="470" r="142" fill="#A78BFA" opacity="0.12"/>
+
+  <g opacity="0.26">
+    <path d="M0 500C180 440 240 580 420 520C600 460 690 350 900 400C1080 442 1170 548 1280 510V640H0V500Z" fill="#111827"/>
+  </g>
+
+  <g filter="url(#blur)" opacity="0.42">
+    <circle cx="952" cy="320" r="116" fill="#F9A8D4"/>
+  </g>
+
+  <rect x="72" y="72" width="542" height="496" rx="30" fill="url(#glass)" stroke="rgba(255,255,255,0.08)"/>
+  <rect x="786" y="112" width="330" height="416" rx="34" fill="#151D2E" stroke="rgba(255,255,255,0.08)"/>
+  <rect x="820" y="152" width="262" height="170" rx="24" fill="url(#accent)" opacity="0.92"/>
+  <rect x="820" y="348" width="262" height="30" rx="15" fill="#293244"/>
+  <rect x="820" y="392" width="210" height="22" rx="11" fill="#232B3C"/>
+  <rect x="820" y="430" width="170" height="22" rx="11" fill="#232B3C"/>
+  <rect x="820" y="472" width="120" height="28" rx="14" fill="#F8B4C6"/>
+
+  <circle cx="874" cy="239" r="42" fill="#FFF7FB" opacity="0.92"/>
+  <path d="M874 219C884.493 219 893 227.507 893 238C893 248.493 884.493 257 874 257C863.507 257 855 248.493 855 238C855 227.507 863.507 219 874 219ZM874 262C891.121 262 905 275.879 905 293H843C843 275.879 856.879 262 874 262Z" fill="#3F2D38"/>
+
+  <text x="112" y="182" fill="white" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="56" font-weight="800">LAISHENG</text>
+  <text x="112" y="228" fill="#C7D2FE" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="20" font-weight="600">Android Social App</text>
+  <text x="112" y="300" fill="#E5E7EB" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22">
+    Compose-based mobile social experience focused on
+  </text>
+  <text x="112" y="338" fill="#E5E7EB" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22">
+    moments, messaging, collections, notifications and profiles.
+  </text>
+
+  <rect x="112" y="392" width="132" height="44" rx="22" fill="#20293A"/>
+  <rect x="256" y="392" width="132" height="44" rx="22" fill="#20293A"/>
+  <rect x="400" y="392" width="132" height="44" rx="22" fill="#20293A"/>
+
+  <text x="145" y="421" fill="#F9FAFB" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="600">Compose</text>
+  <text x="290" y="421" fill="#F9FAFB" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="600">Realtime</text>
+  <text x="430" y="421" fill="#F9FAFB" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="600">Collections</text>
+
+  <text x="112" y="506" fill="#94A3B8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">
+    Live API wired to https://api.haiy.space
+  </text>
+</svg>

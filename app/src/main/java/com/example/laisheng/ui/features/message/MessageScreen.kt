@@ -49,14 +49,18 @@ fun MessageScreen(
     hazeState: HazeState,
     userId: String,
     paddingValues: PaddingValues,
+    onNotificationCenterClick: () -> Unit,
     onChatClick: (String, String, String?) -> Unit,
+    onUserClick: (String) -> Unit,
     viewModel: MessageViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
 
     LaunchedEffect(userId) {
-        if (userId.isNotEmpty()) viewModel.loadChatList(userId)
+        if (userId.isNotEmpty()) {
+            viewModel.loadMessageHub(userId)
+        }
     }
 
     Box(
@@ -67,7 +71,7 @@ fun MessageScreen(
     ) {
         PullToRefreshBox(
             isRefreshing = isRefreshing,
-            onRefresh = { viewModel.loadChatList(userId) },
+            onRefresh = { viewModel.loadMessageHub(userId) },
             modifier = Modifier.fillMaxSize()
         ) {
             when (val state = uiState) {
@@ -95,39 +99,32 @@ fun MessageScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         item {
-                            MessageHeaderCard(userCount = state.chatList.size)
+                            MessageOverviewCard(
+                                notificationCount = state.notifications.size,
+                                chatCount = state.chatList.size,
+                                onClick = onNotificationCenterClick
+                            )
                         }
 
-                        if (state.chatList.isNotEmpty()) {
-                            item {
-                                Column(modifier = Modifier.padding(horizontal = 4.dp)) {
-                                    Text(
-                                        text = "互相关注",
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "默认优先展示和你双向关注的用户，点开就能直接聊天。",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
+                        item {
+                            SectionHeader(
+                                title = "私信会话",
+                                subtitle = "会话按最近消息排序，未读数会显示在头像角标。"
+                            )
                         }
 
                         if (state.chatList.isEmpty()) {
-                            item {
-                                EmptyMessageState()
-                            }
+                            item { EmptyChatState() }
                         } else {
-                            items(state.chatList) { item ->
-                                ChatItem(
+                            items(state.chatList, key = { it.userId ?: it.nickname.orEmpty() }) { item ->
+                                ChatCard(
                                     item = item,
                                     onClick = {
-                                        val targetId = item.userId
-                                        if (!targetId.isNullOrEmpty()) {
-                                            onChatClick(targetId, item.nickname ?: "聊天", item.avatar)
-                                        }
+                                        val targetId = item.userId ?: return@ChatCard
+                                        onChatClick(targetId, item.nickname ?: "聊天", item.avatar)
+                                    },
+                                    onAvatarClick = {
+                                        item.userId?.let(onUserClick)
                                     }
                                 )
                             }
@@ -140,8 +137,15 @@ fun MessageScreen(
 }
 
 @Composable
-private fun MessageHeaderCard(userCount: Int) {
+private fun MessageOverviewCard(
+    notificationCount: Int,
+    chatCount: Int,
+    onClick: () -> Unit
+) {
     Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)
@@ -163,9 +167,12 @@ private fun MessageHeaderCard(userCount: Int) {
                 AppIcon(glyph = AppIcons.Message, tint = MaterialTheme.colorScheme.primary, size = 20.dp)
             }
             Column(modifier = Modifier.padding(start = 14.dp)) {
-                Text("消息", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
                 Text(
-                    text = "当前有 $userCount 位可直接联系的用户",
+                    text = "消息中心",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                )
+                Text(
+                    text = "当前有 $notificationCount 条提醒，$chatCount 个会话。",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -175,22 +182,38 @@ private fun MessageHeaderCard(userCount: Int) {
 }
 
 @Composable
-private fun EmptyMessageState() {
+private fun SectionHeader(title: String, subtitle: String) {
+    Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun EmptyChatState() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 120.dp),
+            .padding(top = 56.dp, bottom = 24.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             AppIcon(glyph = AppIcons.Message, tint = MaterialTheme.colorScheme.outline, size = 28.dp)
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                "还没有可聊天的用户",
+                text = "还没有私信会话",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
             )
             Text(
-                "当出现互相关注或新会话后，会显示在这里。",
+                text = "当你收到消息后，会话会显示在这里。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -199,9 +222,10 @@ private fun EmptyMessageState() {
 }
 
 @Composable
-fun ChatItem(
+private fun ChatCard(
     item: ChatListItem,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onAvatarClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -221,11 +245,12 @@ fun ChatItem(
                         .fillMaxSize()
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable(onClick = onAvatarClick)
                 )
                 if (item.unreadCount > 0) {
                     Box(
                         modifier = Modifier
-                            .size(16.dp)
+                            .size(18.dp)
                             .background(MaterialTheme.colorScheme.error, CircleShape)
                             .align(Alignment.TopEnd)
                             .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
@@ -250,8 +275,7 @@ fun ChatItem(
                 ) {
                     Text(
                         text = item.nickname ?: "未知用户",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                     Text(
                         text = formatChatTime(item.lastTime),
@@ -272,7 +296,7 @@ fun ChatItem(
     }
 }
 
-fun formatChatTime(isoString: String?): String {
+private fun formatChatTime(isoString: String?): String {
     if (isoString.isNullOrEmpty()) return ""
     return try {
         if (isoString.contains("T")) isoString.substring(11, 16) else isoString

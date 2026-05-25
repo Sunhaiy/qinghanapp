@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Project discussion
+    url: https://github.com/
+    about: 如果是开放讨论或方向建议，优先在讨论区或 PR 中说明

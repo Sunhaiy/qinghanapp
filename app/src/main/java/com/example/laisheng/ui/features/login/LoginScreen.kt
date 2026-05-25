@@ -124,7 +124,7 @@ fun LoginScreen(
         Button(
             onClick = {
                 if (isRegisterMode) {
-                    viewModel.register(handle, password, nickname, "")
+                    viewModel.register(handle, password, nickname)
                 } else {
                     viewModel.login(handle, password)
                 }

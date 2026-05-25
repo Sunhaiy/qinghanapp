@@ -3,12 +3,7 @@ package com.example.laisheng.data.model
 import com.google.gson.annotations.SerializedName
 
 data class CreateMomentRequest(
-    @SerializedName("user_id") val userId: String,
     val content: MomentContent
-)
-
-data class DeleteMomentRequest(
-    @SerializedName("user_id") val userId: String
 )
 
 data class MomentActionRequest(
